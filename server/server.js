@@ -16,6 +16,7 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.send("¡Servidor de Margarita funcionando a la perfección!");
 });
+app.use("/api/categories", require("./routes/categories"));
 
 //Iniciar el servidor
 app.listen(PORT, () => {

@@ -18,6 +18,10 @@ const productSchema = new mongoose.Schema(
       ref: "Category",
       required: [true, "La categoría es obligatoria"],
     },
+    description: {
+      type: String,
+      required: [true, "La descripción es obligatoria"],
+    },
     price: {
       type: Number,
       required: [true, "El precio es obligatorio"],
@@ -34,10 +38,6 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 5,
     },
-    description: {
-      type: String,
-      default: "",
-    },
     images: [
       {
         type: String,
@@ -47,10 +47,6 @@ const productSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
-    },
-    featured: {
-      type: Boolean,
-      default: false,
     },
     isNewArrival: {
       type: Boolean,
@@ -62,7 +58,13 @@ const productSchema = new mongoose.Schema(
     },
     offerDiscount: {
       type: Number,
-      default: 0, // porcentaje de descuento
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    featured: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },
@@ -71,6 +73,14 @@ const productSchema = new mongoose.Schema(
 // Virtual para verificar stock bajo
 productSchema.virtual("isLowStock").get(function () {
   return this.stock <= this.minStockAlert;
+});
+
+// Virtual para precio con descuento
+productSchema.virtual("finalPrice").get(function () {
+  if (this.isWeeklyOffer && this.offerDiscount > 0) {
+    return this.price - (this.price * this.offerDiscount) / 100;
+  }
+  return this.price;
 });
 
 module.exports = mongoose.model("Product", productSchema);

@@ -22,6 +22,14 @@ const categorySchema = new mongoose.Schema(
       type: String,
       default: "https://via.placeholder.com/400x400?text=Categoria",
     },
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+    featuredOrder: {
+      type: Number,
+      default: 0,
+    },
     icon: {
       type: String,
       default: "box",

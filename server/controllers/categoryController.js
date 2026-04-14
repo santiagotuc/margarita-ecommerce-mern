@@ -134,3 +134,51 @@ exports.toggleCategory = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Toggle destacado
+exports.toggleFeatured = async (req, res) => {
+  try {
+    const { featured, featuredOrder } = req.body;
+
+    const category = await Category.findById(req.params.id);
+    if (!category) {
+      return res.status(404).json({ message: "Categoría no encontrada" });
+    }
+
+    // Si la está poniendo como destacada
+    if (featured === true) {
+      category.featured = true;
+      category.featuredOrder = featuredOrder || 0;
+    } else {
+      category.featured = false;
+      category.featuredOrder = 0;
+    }
+
+    await category.save();
+
+    res.json({
+      message: featured
+        ? "Categoría destacada"
+        : "Categoría quitada de destacados",
+      category,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Obtener categorías destacadas (para el frontend)
+exports.getFeaturedCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({
+      isActive: true,
+      featured: true,
+    })
+      .sort({ featuredOrder: 1, name: 1 })
+      .limit(4); // Máximo 4 destacadas
+
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

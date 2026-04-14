@@ -161,6 +161,24 @@ const AdminCategories = () => {
       alert(error.response?.data?.message || "Error eliminando categoría");
     }
   };
+  // En AdminCategories.jsx, agregar checkbox para destacadas:
+  const toggleFeatured = async (id, featured) => {
+    try {
+      await api.patch(`/categories/${id}/featured`, { featured });
+      fetchCategories();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // En el render de cada categoría:
+  <button
+    onClick={() => toggleFeatured(category._id, !category.featured)}
+    className={`p-2 rounded ${category.featured ? "bg-yellow-100 text-yellow-600" : "bg-gray-100"}`}
+    title="Destacar en home"
+  >
+    {category.featured ? "⭐" : "☆"}
+  </button>;
 
   const toggleActive = async (id) => {
     try {

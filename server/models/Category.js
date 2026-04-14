@@ -4,28 +4,37 @@ const categorySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, "El nombre es obligatorio"],
       unique: true,
       trim: true,
     },
     slug: {
       type: String,
-      required: true,
       unique: true,
-      localStorage: true,
+      lowercase: true,
       trim: true,
     },
     description: {
       type: String,
+      default: "",
     },
     image: {
       type: String,
       default: "https://via.placeholder.com/400x400?text=Categoria",
     },
-
     icon: {
       type: String,
-      default: "https://via.placeholder.com/100x100?text=Icono",
+      default: "box",
+      enum: [
+        "droplet",
+        "sun",
+        "heart",
+        "box",
+        "package",
+        "wind",
+        "feather",
+        "hexagon",
+      ],
     },
     order: {
       type: Number,
@@ -43,7 +52,7 @@ const categorySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Middleware para generar el slug automáticamente antes de guardar la categoría
+// Middleware para generar slug automáticamente
 categorySchema.pre("save", function (next) {
   if (this.isModified("name")) {
     this.slug = this.name

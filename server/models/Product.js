@@ -7,40 +7,58 @@ const productSchema = new mongoose.Schema(
       required: [true, "El nombre del producto es obligatorio"],
       trim: true,
     },
-
     sku: {
       type: String,
-      required: [true, "El SKU del producto es obligatorio"],
+      required: [true, "El SKU es obligatorio"],
       trim: true,
       unique: true,
     },
-
     category: {
-      type: String,
-      required: [true, "La categoría del producto es obligatoria"],
-      enum: ["Mochilas", "Botellas", "Kits", "Tazas", "Libretas", "Accesorios"],
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: [true, "La categoría es obligatoria"],
     },
     price: {
       type: Number,
-      required: [true, "El precio del producto es obligatorio"],
+      required: [true, "El precio es obligatorio"],
+      min: 0,
       default: 0,
     },
     stock: {
       type: Number,
-      required: [true, "El stock del producto es obligatorio"],
+      required: [true, "El stock es obligatorio"],
+      min: 0,
+      default: 0,
     },
-
     minStockAlert: {
       type: Number,
       default: 5,
     },
-
-    imageUrl: {
+    description: {
       type: String,
-      required: [true, "La URL de la imagen del producto es obligatoria"],
+      default: "",
+    },
+    images: [
+      {
+        type: String,
+        required: [true, "Al menos una imagen es obligatoria"],
+      },
+    ],
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    featured: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },
 );
+
+// Virtual para verificar stock bajo
+productSchema.virtual("isLowStock").get(function () {
+  return this.stock <= this.minStockAlert;
+});
 
 module.exports = mongoose.model("Product", productSchema);

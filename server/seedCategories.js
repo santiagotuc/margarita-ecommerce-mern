@@ -1,76 +1,96 @@
-const mongoose = require("mongoose");
-const Category = require("./models/Category");
 require("dotenv").config();
+const mongoose = require("mongoose");
+const connectDB = require("./config/db");
+const Category = require("./models/Category");
+
+// Función para generar slug (copiada del schema)
+const generateSlug = (name) => {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // quitar acentos
+    .replace(/[^a-z0-9]+/g, "-") // reemplazar espacios y caracteres especiales
+    .replace(/(^-|-$)+/g, ""); // quitar guiones al inicio/final
+};
 
 const categories = [
   {
-    name: "Jabones",
-    description: "Insumos para jabonería artesanal",
-    icon: "droplet",
-    order: 1,
-  },
-  {
-    name: "Velas",
-    description: "Ceras, pabilos y moldes para velas",
-    icon: "sun",
-    order: 2,
-  },
-  {
-    name: "Cosmética",
-    description: "Ingredientes naturales para cosmética",
-    icon: "heart",
-    order: 3,
-  },
-  {
-    name: "Moldes",
-    description: "Moldes de silicona y plástico",
+    name: "Mochilas",
+    slug: "mochilas", // ← Agregado manualmente
+    description: "Mochilas escolares con diseños únicos y duraderos",
     icon: "box",
-    order: 4,
+    order: 1,
+    image:
+      "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
   },
   {
-    name: "Envases",
-    description: "Frascos, potes y envases",
+    name: "Botellas",
+    slug: "botellas", // ← Agregado manualmente
+    description: "Botellas térmicas y cantimploras para mantener tus bebidas",
+    icon: "droplet",
+    order: 2,
+    image:
+      "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
+  },
+  {
+    name: "Kits Escolares",
+    slug: "kits-escolares", // ← Agregado manualmente
+    description: "Kits completos con todo lo necesario para el cole",
     icon: "package",
-    order: 5,
+    order: 3,
+    image:
+      "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
   },
   {
-    name: "Flores Secas",
-    description: "Flores naturales secas para decoración",
-    icon: "wind",
-    order: 6,
+    name: "Tazas",
+    slug: "tazas", // ← Agregado manualmente
+    description: "Tazas personalizadas y únicas",
+    icon: "sun",
+    order: 4,
+    image:
+      "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
   },
   {
-    name: "Kits",
-    description: "Kits completos para principiantes",
+    name: "Libretas",
+    slug: "libretas", // ← Agregado manualmente
+    description: "Libretas y cuadernos para todas las materias",
     icon: "feather",
-    order: 7,
+    order: 5,
+    image:
+      "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
   },
   {
-    name: "Madera",
-    description: "Artesanías en madera",
-    icon: "hexagon",
-    order: 8,
+    name: "Accesorios",
+    slug: "accesorios", // ← Agregado manualmente
+    description: "Accesorios escolares variados",
+    icon: "heart",
+    order: 6,
+    image:
+      "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
   },
 ];
 
-const seedCategories = async () => {
+const seedDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ Conectado a MongoDB");
+    await connectDB();
 
     // Limpiar categorías existentes
     await Category.deleteMany({});
-    console.log("🗑️ Categorías anteriores eliminadas");
+    console.log("🗑️  Categorías anteriores eliminadas");
 
-    // Insertar nuevas categorías
+    // Insertar nuevas categorías (ahora con slugs definidos)
     await Category.insertMany(categories);
-    console.log(`✅ ${categories.length} categorías creadas`);
+    console.log("✅ Categorías de Margarita insertadas correctamente");
 
-    process.exit(0);
+    // Mostrar resumen
+    const count = await Category.countDocuments();
+    console.log(`📊 Total categorías: ${count}`);
+
+    process.exit();
   } catch (error) {
     console.error("❌ Error:", error.message);
     process.exit(1);
   }
 };
 
-seedCategories();
+seedDB();

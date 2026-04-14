@@ -2,13 +2,13 @@ const express = require("express");
 const router = express.Router();
 const categoryController = require("../controllers/categoryController");
 const { auth, adminOnly } = require("../middleware/auth");
-const { upload } = require("../middleware/upload");
+const { upload } = require("../middleware/upload"); // ← Así debe ser
 
-// Público
+// GET público
 router.get("/", categoryController.getCategories);
 router.get("/:slug", categoryController.getCategoryBySlug);
 
-// Admin (protegidas)
+// Rutas admin (protegidas)
 router.get("/all", auth, adminOnly, categoryController.getAllCategories);
 router.post(
   "/",

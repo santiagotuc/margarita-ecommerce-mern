@@ -18,6 +18,7 @@ import Register from "./pages/Register";
 import AdminProfile from "./pages/AdminProfile";
 import AdminCategories from "./pages/AdminCategories";
 import AdminSettings from "./pages/AdminSettings";
+import AdminProducts from "./pages/AdminProducts";
 
 // Scroll to top
 const ScrollToTop = () => {

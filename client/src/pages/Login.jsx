@@ -192,40 +192,6 @@ const Login = () => {
               </span>
             </button>
           </form>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/50 text-neutral-500">
-                Credenciales de prueba
-              </span>
-            </div>
-          </div>
-
-          {/* Info de demo */}
-          <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-100">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">🔑</span>
-              <div>
-                <p className="font-medium text-amber-800 text-sm mb-1">
-                  Acceso de administradora
-                </p>
-                <p className="text-amber-700 text-xs">
-                  Email:{" "}
-                  <span className="font-mono font-medium">
-                    ari@margarita.com
-                  </span>
-                </p>
-                <p className="text-amber-700 text-xs">
-                  Pass:{" "}
-                  <span className="font-mono font-medium">margarita2024</span>
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

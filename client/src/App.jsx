@@ -11,7 +11,7 @@ import Footer from "./components/Footer";
 import PrivateRoute from "./components/PrivateRoute";
 import Hero from "./components/Hero";
 import BannerSection from "./components/BannerSection";
-import CategoryCircles from "./components/CategoryCircles";
+import CategoryCards from "./components/CategoryCards";
 import ProductGrid from "./components/ProductGrid";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -19,6 +19,7 @@ import AdminProfile from "./pages/AdminProfile";
 import AdminCategories from "./pages/AdminCategories";
 import AdminSettings from "./pages/AdminSettings";
 import AdminProducts from "./pages/AdminProducts";
+import Shop from "./pages/Shop";
 
 // Scroll to top
 const ScrollToTop = () => {
@@ -32,7 +33,7 @@ const Home = () => (
   <>
     <Hero />
     <BannerSection />
-    <CategoryCircles />
+    <CategoryCards />
     <ProductGrid />
   </>
 );
@@ -82,6 +83,14 @@ function App() {
           element={
             <MainLayout>
               <Home />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/productos"
+          element={
+            <MainLayout>
+              <Shop />
             </MainLayout>
           }
         />

@@ -108,7 +108,7 @@ const Header = () => {
                 onClick={() => setProductsOpen(!productsOpen)}
                 className="flex items-center gap-1 text-neutral-800 hover:text-primary-500 font-medium"
               >
-                PRODUCTOS <FiChevronDown />
+                CATEGORÍAS <FiChevronDown />
               </button>
 
               {productsOpen && (
@@ -245,7 +245,7 @@ const Header = () => {
             <Link to="/" className="py-2 text-neutral-800 font-medium">
               INICIO
             </Link>
-            <p className="font-medium text-neutral-600 mt-2">PRODUCTOS</p>
+            <p className="font-medium text-neutral-600 mt-2">CATEGORÍAS</p>
             {menuItems.map((item) => (
               <Link
                 key={item._id || item.slug}

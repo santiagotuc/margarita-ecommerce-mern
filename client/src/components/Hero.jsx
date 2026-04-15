@@ -1,4 +1,5 @@
 import { useSite } from "../context/SiteContext";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
   const { hero } = useSite();
@@ -26,12 +27,18 @@ const Hero = () => {
               {heroData.subtitle}
             </p>
             <div className="flex flex-wrap gap-4">
-              <button className="bg-primary-500 text-white px-8 py-3 rounded-full font-medium hover:bg-primary-600 transition-colors shadow-lg">
+              <Link
+                to="/productos"
+                className="bg-primary-500 text-white px-8 py-3 rounded-full font-medium hover:bg-primary-600 transition-colors shadow-lg"
+              >
                 {heroData.buttonText || "Ver Productos"}
-              </button>
-              <button className="border-2 border-primary-500 text-primary-500 px-8 py-3 rounded-full font-medium hover:bg-primary-50 transition-colors">
+              </Link>
+              <Link
+                to="/categorias"
+                className="border-2 border-primary-500 text-primary-500 px-8 py-3 rounded-full font-medium hover:bg-primary-50 transition-colors"
+              >
                 Conocer Más
-              </button>
+              </Link>
             </div>
           </div>
 

@@ -10,9 +10,7 @@ router.get("/", categoryController.getCategories);
 // GET público - destacadas
 router.get("/featured", categoryController.getFeaturedCategories);
 
-// GET público - una categoría
-router.get("/:slug", categoryController.getCategoryBySlug);
-
+// --- TODAS LAS RUTAS ESPECÍFICAS VAN ANTES DEL /:slug ---
 // Rutas admin (protegidas)
 router.get("/all", auth, categoryController.getAllCategories);
 router.post(
@@ -30,5 +28,9 @@ router.put(
 router.delete("/:id", auth, categoryController.deleteCategory);
 router.patch("/:id/toggle", auth, categoryController.toggleCategory);
 router.patch("/:id/featured", auth, categoryController.toggleFeatured);
+
+// --- ESTA RUTA DEBE IR AL FINAL ---
+// GET público - una categoría
+router.get("/:slug", categoryController.getCategoryBySlug);
 
 module.exports = router;

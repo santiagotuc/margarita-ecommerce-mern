@@ -21,6 +21,8 @@ import AdminSettings from "./pages/AdminSettings";
 import AdminProducts from "./pages/AdminProducts";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 // Scroll to top
 const ScrollToTop = () => {
@@ -108,6 +110,23 @@ function App() {
           element={
             <MainLayout>
               <ProductDetail />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/nosotros"
+          element={
+            <MainLayout>
+              <About />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/contacto"
+          element={
+            <MainLayout>
+              <Contact />
             </MainLayout>
           }
         />

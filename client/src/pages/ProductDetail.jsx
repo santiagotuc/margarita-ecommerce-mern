@@ -8,6 +8,7 @@ import {
   FiCheck,
 } from "react-icons/fi";
 import api from "../services/api";
+import { useCart } from "../context/CartContext"; // <-- 1. Importamos la función del carrito
 
 const ProductDetail = () => {
   const { id } = useParams(); // Obtenemos el ID de la URL
@@ -16,6 +17,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState(0); // Para la galería de imágenes
   const [quantity, setQuantity] = useState(1);
+  const { addToCart } = useCart(); // <-- 2. Extraemos la acción para añadir al carrito
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -177,6 +179,7 @@ const ProductDetail = () => {
               </div>
 
               <button
+                onClick={() => addToCart(product, quantity)} // <-- 3. Agregamos el evento onClick al botón
                 className="w-full bg-primary-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-primary-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={product.stock === 0}
               >

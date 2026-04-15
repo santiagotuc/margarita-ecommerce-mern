@@ -13,6 +13,7 @@ import Hero from "./components/Hero";
 import BannerSection from "./components/BannerSection";
 import CategoryCards from "./components/CategoryCards";
 import ProductGrid from "./components/ProductGrid";
+import CartSidebar from "./components/CartSidebar"; // <-- 1. Importamos el componente del carrito visual
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminProfile from "./pages/AdminProfile";
@@ -45,6 +46,7 @@ const Home = () => (
 const MainLayout = ({ children }) => (
   <>
     <Header />
+    <CartSidebar /> {/* <-- 2. Lo agregamos justo debajo del Header */}
     <main className="min-h-screen">{children}</main>
     <Footer />
   </>

@@ -1,27 +1,19 @@
 import { Link } from "react-router-dom";
+import { useSite } from "../context/SiteContext";
 
 const CategoryCircles = () => {
-  const categories = [
-    {
-      name: "Mochilas",
-      emoji: "🎒",
-      color: "bg-accent-lavender",
-      href: "#mochilas",
-    },
-    {
-      name: "Botellas",
-      emoji: "💧",
-      color: "bg-accent-mint",
-      href: "#botellas",
-    },
-    { name: "Tazas", emoji: "☕", color: "bg-accent-pink", href: "#tazas" },
-    {
-      name: "Kits Escolares",
-      emoji: "🎨",
-      color: "bg-accent-yellow",
-      href: "#kits",
-    },
-  ];
+  // 1. Traemos las categorías del Contexto Global que ya tienes configurado
+  const { categories } = useSite();
+
+  // 2. Filtramos SOLO las que están activas y marcadas como "destacadas" (featured)
+  // Las ordenamos y cortamos para mostrar máximo 4
+  const featuredCategories = categories
+    .filter((cat) => cat.isActive && cat.featured)
+    .sort((a, b) => a.featuredOrder - b.featuredOrder)
+    .slice(0, 4);
+
+  // Si aún no ha destacado ninguna, no mostramos la sección para evitar errores visuales
+  if (featuredCategories.length === 0) return null;
 
   return (
     <section className="py-12 px-4 bg-white">
@@ -34,20 +26,23 @@ const CategoryCircles = () => {
         </p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {categories.map((cat) => (
+          {featuredCategories.map((cat) => (
             <Link
-              key={cat.name}
-              to={cat.href}
+              key={cat._id}
+              to={`/categoria/${cat.slug}`}
               className="group flex flex-col items-center text-center"
             >
-              <div
-                className={`${cat.color} w-32 h-32 md:w-40 md:h-40 rounded-full flex items-center justify-center text-5xl md:text-6xl mb-4 group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-xl`}
-              >
-                {cat.emoji}
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full mb-4 group-hover:scale-105 transition-transform shadow-lg group-hover:shadow-xl overflow-hidden border-4 border-white">
+                {/* Usamos la imagen real que la administradora subió */}
+                <img
+                  src={cat.image}
+                  alt={cat.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <h3 className="font-bold text-neutral-800 mb-1">{cat.name}</h3>
               <p className="text-xs text-primary-500 uppercase tracking-wide font-medium">
-                Ver {cat.name.toLowerCase()} →
+                Ver todo →
               </p>
             </Link>
           ))}

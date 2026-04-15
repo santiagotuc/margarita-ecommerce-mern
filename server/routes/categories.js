@@ -14,30 +14,21 @@ router.get("/featured", categoryController.getFeaturedCategories);
 router.get("/:slug", categoryController.getCategoryBySlug);
 
 // Rutas admin (protegidas)
-router.get("/all", auth, adminOnly, categoryController.getAllCategories);
+router.get("/all", auth, categoryController.getAllCategories);
 router.post(
   "/",
   auth,
-  adminOnly,
   upload.single("image"),
   categoryController.createCategory,
 );
 router.put(
   "/:id",
   auth,
-  adminOnly,
   upload.single("image"),
   categoryController.updateCategory,
 );
-router.delete("/:id", auth, adminOnly, categoryController.deleteCategory);
-router.patch("/:id/toggle", auth, adminOnly, categoryController.toggleCategory);
-
-// ← NUEVO: Endpoint para destacar categoría
-router.patch(
-  "/:id/featured",
-  auth,
-  adminOnly,
-  categoryController.toggleFeatured,
-);
+router.delete("/:id", auth, categoryController.deleteCategory);
+router.patch("/:id/toggle", auth, categoryController.toggleCategory);
+router.patch("/:id/featured", auth, categoryController.toggleFeatured);
 
 module.exports = router;

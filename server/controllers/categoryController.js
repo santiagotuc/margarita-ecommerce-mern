@@ -14,10 +14,26 @@ exports.getCategories = async (req, res) => {
   }
 };
 
-// Obtener todas las categorías (admin)
+// Obtener todas las categorías (Admin)
 exports.getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ order: 1, name: 1 });
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Obtener categorías destacadas
+exports.getFeaturedCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({
+      isActive: true,
+      featured: true,
+    })
+      .sort({ featuredOrder: 1, name: 1 })
+      .limit(4);
+
     res.json(categories);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -54,7 +70,10 @@ exports.createCategory = async (req, res) => {
     const category = new Category(categoryData);
     await category.save();
 
-    res.status(201).json(category);
+    res.status(201).json({
+      message: "Categoría creada exitosamente",
+      category,
+    });
   } catch (error) {
     if (error.code === 11000) {
       return res
@@ -84,7 +103,10 @@ exports.updateCategory = async (req, res) => {
       return res.status(404).json({ message: "Categoría no encontrada" });
     }
 
-    res.json(category);
+    res.json({
+      message: "Categoría actualizada",
+      category,
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -129,7 +151,12 @@ exports.toggleCategory = async (req, res) => {
     category.isActive = !category.isActive;
     await category.save();
 
-    res.json(category);
+    res.json({
+      message: category.isActive
+        ? "Categoría activada"
+        : "Categoría desactivada",
+      category,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -145,12 +172,10 @@ exports.toggleFeatured = async (req, res) => {
       return res.status(404).json({ message: "Categoría no encontrada" });
     }
 
-    // Si la está poniendo como destacada
-    if (featured === true) {
-      category.featured = true;
+    category.featured = featured;
+    if (featured) {
       category.featuredOrder = featuredOrder || 0;
     } else {
-      category.featured = false;
       category.featuredOrder = 0;
     }
 
@@ -162,22 +187,6 @@ exports.toggleFeatured = async (req, res) => {
         : "Categoría quitada de destacados",
       category,
     });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Obtener categorías destacadas (para el frontend)
-exports.getFeaturedCategories = async (req, res) => {
-  try {
-    const categories = await Category.find({
-      isActive: true,
-      featured: true,
-    })
-      .sort({ featuredOrder: 1, name: 1 })
-      .limit(4); // Máximo 4 destacadas
-
-    res.json(categories);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

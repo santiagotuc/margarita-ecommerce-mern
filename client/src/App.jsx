@@ -46,17 +46,6 @@ const MainLayout = ({ children }) => (
   </>
 );
 
-// Páginas placeholder temporales
-const AdminProducts = () => (
-  <div className="max-w-6xl mx-auto p-8 text-center">
-    <h1 className="text-3xl font-bold mb-4">Gestión de Productos</h1>
-    <p className="text-gray-600">Esta sección está en desarrollo.</p>
-    <p className="text-gray-500 mt-2">
-      Pronto podrás agregar, editar y eliminar productos.
-    </p>
-  </div>
-);
-
 const EditProfile = () => {
   const { user } = useSelector((state) => state.auth);
   return (

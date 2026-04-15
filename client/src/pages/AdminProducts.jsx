@@ -43,6 +43,25 @@ const AdminProducts = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const navigate = useNavigate();
 
+  // Nuevos estados para el Modal de Categoría
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategory, setNewCategory] = useState({
+    name: "",
+    description: "",
+    icon: "box",
+  });
+
+  const icons = [
+    { value: "droplet", label: "Gota (Jabones)" },
+    { value: "sun", label: "Sol (Velas)" },
+    { value: "heart", label: "Corazón (Cosmética)" },
+    { value: "box", label: "Caja (Moldes)" },
+    { value: "package", label: "Paquete (Envases)" },
+    { value: "wind", label: "Viento (Flores)" },
+    { value: "feather", label: "Pluma (Kits)" },
+    { value: "hexagon", label: "Hexágono (Madera)" },
+  ];
+
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -62,7 +81,7 @@ const AdminProducts = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await api.get("/categories/all");
+      const res = await api.get("/categories");
       setCategories(res.data.filter((cat) => cat.isActive));
     } catch (error) {
       console.error("Error cargando categorías:", error);
@@ -78,9 +97,26 @@ const AdminProducts = () => {
 
     setSelectedFiles(files);
 
-    // Crear previews
     const previews = files.map((file) => URL.createObjectURL(file));
     setPreviewImages(previews);
+  };
+
+  // Función para crear categoría rápida
+  const handleQuickCreateCategory = async (e) => {
+    e.preventDefault();
+    try {
+      const { data } = await api.post("/categories", newCategory);
+
+      setCategories([...categories, data.category]);
+      setFormData({ ...formData, category: data.category._id });
+
+      setShowCategoryModal(false);
+      setNewCategory({ name: "", description: "", icon: "box" });
+
+      alert("Categoría creada exitosamente");
+    } catch (error) {
+      alert(error.response?.data?.message || "Error creando categoría");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -89,12 +125,10 @@ const AdminProducts = () => {
     try {
       const data = new FormData();
 
-      // Agregar todos los campos
       Object.keys(formData).forEach((key) => {
         data.append(key, formData[key]);
       });
 
-      // Agregar imágenes
       selectedFiles.forEach((file) => {
         data.append("images", file);
       });
@@ -274,11 +308,19 @@ const AdminProducts = () => {
               />
             </div>
 
-            {/* Categoría */}
+            {/* Categoría con botón de crear rápido */}
             <div>
-              <label className="block font-medium mb-2 text-sm">
-                Categoría *
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block font-medium text-sm">Categoría *</label>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="text-primary-500 text-sm hover:text-primary-600 flex items-center gap-1 font-medium"
+                >
+                  <FiPlus size={16} /> Crear nueva categoría
+                </button>
+              </div>
+
               <select
                 value={formData.category}
                 onChange={(e) =>
@@ -294,6 +336,12 @@ const AdminProducts = () => {
                   </option>
                 ))}
               </select>
+
+              {categories.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  No hay categorías creadas. Crea una primero.
+                </p>
+              )}
             </div>
 
             {/* Precio */}
@@ -645,6 +693,95 @@ const AdminProducts = () => {
           </div>
         )}
       </div>
+
+      {/* Modal Crear Categoría Rápida */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <FiPlus className="text-primary-500" />
+                Nueva Categoría
+              </h3>
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className="p-2 hover:bg-neutral-100 rounded-full"
+              >
+                <FiX />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickCreateCategory} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Nombre *
+                </label>
+                <input
+                  type="text"
+                  value={newCategory.name}
+                  onChange={(e) =>
+                    setNewCategory({ ...newCategory, name: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                  placeholder="Ej: Mochilas"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Descripción
+                </label>
+                <textarea
+                  value={newCategory.description}
+                  onChange={(e) =>
+                    setNewCategory({
+                      ...newCategory,
+                      description: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 outline-none resize-none"
+                  placeholder="Breve descripción..."
+                  rows="2"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Icono</label>
+                <select
+                  value={newCategory.icon}
+                  onChange={(e) =>
+                    setNewCategory({ ...newCategory, icon: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                >
+                  {icons.map((icon) => (
+                    <option key={icon.value} value={icon.value}>
+                      {icon.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-primary-500 text-white py-3 rounded-lg hover:bg-primary-600 font-medium"
+                >
+                  Crear Categoría
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="px-6 py-3 border border-neutral-300 rounded-lg hover:bg-neutral-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

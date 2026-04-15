@@ -14,11 +14,15 @@ exports.getConfig = async (req, res) => {
 exports.updateConfig = async (req, res) => {
   try {
     const config = await SiteConfig.getConfig();
-
-    // Actualizar campos permitidos
     const updates = req.body;
 
-    // Merge profundo para objetos anidados
+    // Si la administradora subió un archivo, lo guardamos en el objeto hero
+    if (req.file) {
+      if (!updates.hero) updates.hero = {};
+      updates.hero.image = req.file.path; // URL de Cloudinary
+    }
+
+    // Merge profundo para objetos anidados...
     if (updates.hero) Object.assign(config.hero, updates.hero);
     if (updates.contact) Object.assign(config.contact, updates.contact);
     if (updates.social) Object.assign(config.social, updates.social);

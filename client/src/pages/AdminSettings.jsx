@@ -17,6 +17,7 @@ const AdminSettings = () => {
     contact: { email: "", phone: "", address: "" },
     social: { instagram: "", facebook: "", youtube: "", tiktok: "" },
     aboutUs: { title: "", content: "" },
+    hero: { title: "", subtitle: "", image: "" },
   });
 
   const [saving, setSaving] = useState(false);
@@ -30,6 +31,7 @@ const AdminSettings = () => {
         contact: { ...formData.contact, ...config.contact },
         social: { ...formData.social, ...config.social },
         aboutUs: { ...formData.aboutUs, ...config.aboutUs },
+        hero: { ...formData.hero, ...config.hero },
       });
     }
   }, [config]);
@@ -211,6 +213,66 @@ const AdminSettings = () => {
           </div>
         </div>
 
+        {/* NUEVO: Portada Principal */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            🖼️ Portada Principal (Hero)
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block font-medium mb-1 text-sm text-neutral-600">
+                Título Principal
+              </label>
+              <input
+                value={formData.hero.title}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    hero: { ...formData.hero, title: e.target.value },
+                  })
+                }
+                className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Ej: Bienvenidos al mundo de Margarita"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-sm text-neutral-600">
+                Subtítulo
+              </label>
+              <input
+                value={formData.hero.subtitle}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    hero: { ...formData.hero, subtitle: e.target.value },
+                  })
+                }
+                className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Ej: Estilo y alegría para tu día a día"
+              />
+            </div>
+            <div>
+              <label className="block font-medium mb-1 text-sm text-neutral-600">
+                Enlace de la Imagen (URL)
+              </label>
+              <input
+                value={formData.hero.image}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    hero: { ...formData.hero, image: e.target.value },
+                  })
+                }
+                className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="https://ejemplo.com/mifoto.jpg"
+              />
+              <p className="text-xs text-neutral-400 mt-1">
+                Pega aquí el enlace de la imagen que quieres mostrar en el
+                inicio.
+              </p>
+            </div>
+          </div>
+        </div>
         {/* COLUMNA 2: Redes Sociales */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 h-fit">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">

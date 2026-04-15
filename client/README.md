@@ -1,16 +1,26 @@
-# React + Vite
+# Margarita - E-Commerce MERN Stack con Cierre por WhatsApp 🛍️📲
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Margarita es una plataforma de comercio electrónico "Full Stack" desarrollada completamente desde cero utilizando el stack MERN. Este proyecto fue diseñado con un enfoque en la alta conversión y la fricción cero para el usuario, reemplazando las pasarelas de pago tradicionales con un sistema de cierre de ventas automatizado directo a WhatsApp.
 
-Currently, two official plugins are available:
+## 🚀 Características Principales
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Carrito Inteligente hacia WhatsApp:** Los usuarios agregan productos a un carrito lateral (Slide-over). Al finalizar, el sistema compila la orden, calcula totales (incluyendo descuentos por ofertas) y genera un mensaje pre-formateado directamente al WhatsApp del administrador.
+- **Panel de Administración Integral (CMS):** Rutas protegidas mediante JWT que permiten al administrador gestionar el inventario completo sin tocar una sola línea de código.
+- **Gestión de Inventario en Tiempo Real:** \* CRUD completo de Categorías y Productos.
+  - Control de Stock y sistema de "Ofertas" destacadas.
+  - Integración con Cloudinary para el manejo eficiente de imágenes.
+- **Configuración Dinámica de la Tienda:** El frontend reacciona a los cambios en la base de datos para actualizar instantáneamente los Banners, el Slider de Productos Destacados, las Redes Sociales, el Texto de "Sobre Nosotros" y los datos de contacto.
+- **Diseño UI/UX Premium:** Interfaz limpia, responsiva y moderna construida con Tailwind CSS, con animaciones fluidas y modales profesionales.
 
-## React Compiler
+## 🛠️ Tecnologías Utilizadas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend:** React (Vite), React Router Dom, Tailwind CSS, Redux Toolkit (Autenticación), Context API (Carrito y Configuración Global), React Icons.
+- **Backend:** Node.js, Express.js.
+- **Base de Datos:** MongoDB (Mongoose).
+- **Autenticación y Seguridad:** JSON Web Tokens (JWT) y encriptación de contraseñas con bcrypt.
+- **Almacenamiento en la Nube:** Cloudinary (Imágenes).
+- **Despliegue:** Vercel (Frontend) y Render (Backend).
 
-## Expanding the ESLint configuration
+## 💡 Motivación y UX
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+En el mercado latinoamericano, la inmediatez y la atención personalizada superan a las pasarelas de pago automatizadas. Este e-commerce elimina la barrera del registro obligatorio para comprar y el abandono de carritos por fallos en tarjetas, derivando una intención de compra altamente cualificada directamente al canal de comunicación más usado: WhatsApp.

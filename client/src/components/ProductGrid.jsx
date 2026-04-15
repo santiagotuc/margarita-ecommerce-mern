@@ -99,9 +99,12 @@ const ProductGrid = () => {
                     )}
                   </div>
 
-                  <button className="w-12 h-12 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                  <Link
+                    to={`/producto/${product._id}`}
+                    className="w-12 h-12 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center group-hover:bg-primary-500 group-hover:text-white transition-colors"
+                  >
                     <FiShoppingCart size={20} />
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>

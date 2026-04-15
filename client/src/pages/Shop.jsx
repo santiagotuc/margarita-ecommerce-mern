@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useParams } from "react-router-dom";
 import { useSite } from "../context/SiteContext";
 import api from "../services/api";
 import { FiShoppingCart, FiFilter, FiX } from "react-icons/fi";
@@ -7,24 +7,36 @@ import { FiShoppingCart, FiFilter, FiX } from "react-icons/fi";
 const Shop = () => {
   const { categories } = useSite();
   const location = useLocation();
+  const { slug } = useParams(); // ¡Atrapamos el nombre de la categoría de la URL!
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Obtener parámetros de la URL (por si vienen de un banner)
   const queryParams = new URLSearchParams(location.search);
-  const categoryId = queryParams.get("categoria");
   const filterType = queryParams.get("filtro");
 
+  // Buscamos la categoría actual para poner el título correcto
+  const activeCategory = categories.find((c) => c.slug === slug);
+
   useEffect(() => {
-    fetchProducts();
-  }, [location.search]); // Se recarga si cambia la URL
+    // Esperamos a que las categorías carguen en el contexto global antes de buscar productos
+    if (!slug || categories.length > 0) {
+      fetchProducts();
+    }
+  }, [location.search, slug, categories]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
       let url = "/products?";
-      if (categoryId) url += `category=${categoryId}&`;
+
+      // Si estamos en /categoria/botellas, buscamos el ID de "botellas"
+      if (slug && categories.length > 0) {
+        const cat = categories.find((c) => c.slug === slug);
+        if (cat) url += `category=${cat._id}&`;
+      }
+
       if (filterType === "nuevos") url += `newArrivals=true&`;
       if (filterType === "ofertas") url += `offer=true&`;
 
@@ -39,12 +51,14 @@ const Shop = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Encabezado de página */}
+      {/* Encabezado */}
       <div className="mb-8 border-b border-neutral-100 pb-6 flex justify-between items-center">
         <h1 className="text-3xl font-black text-neutral-800 uppercase">
-          {filterType
-            ? `Catálogo: ${filterType.toUpperCase()}`
-            : "Tienda Completa"}
+          {activeCategory
+            ? activeCategory.name
+            : filterType
+              ? `Catálogo: ${filterType}`
+              : "Tienda Completa"}
         </h1>
         <button
           onClick={() => setShowMobileFilters(true)}
@@ -55,7 +69,7 @@ const Shop = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-10">
-        {/* SIDEBAR: Menú de Categorías (Izquierda) */}
+        {/* SIDEBAR: Categorías */}
         <aside
           className={`fixed inset-0 z-50 bg-white p-6 md:relative md:inset-auto md:z-0 md:bg-transparent md:p-0 md:w-64 transition-transform ${showMobileFilters ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
         >
@@ -74,7 +88,7 @@ const Shop = () => {
               <li>
                 <Link
                   to="/productos"
-                  className={`block py-2 px-4 rounded-xl transition-colors ${!categoryId ? "bg-primary-500 text-white font-bold" : "hover:bg-neutral-100"}`}
+                  className={`block py-2 px-4 rounded-xl transition-colors ${!slug && !filterType ? "bg-primary-500 text-white font-bold" : "hover:bg-neutral-100"}`}
                 >
                   Todas las categorías
                 </Link>
@@ -83,9 +97,10 @@ const Shop = () => {
                 .filter((c) => c.isActive)
                 .map((cat) => (
                   <li key={cat._id}>
+                    {/* Aquí usamos las URL limpias /categoria/:slug */}
                     <Link
-                      to={`/productos?categoria=${cat._id}`}
-                      className={`block py-2 px-4 rounded-xl transition-colors ${categoryId === cat._id ? "bg-primary-500 text-white font-bold" : "hover:bg-neutral-100"}`}
+                      to={`/categoria/${cat.slug}`}
+                      className={`block py-2 px-4 rounded-xl transition-colors ${slug === cat.slug ? "bg-primary-500 text-white font-bold" : "hover:bg-neutral-100"}`}
                     >
                       {cat.name}
                     </Link>
@@ -113,7 +128,7 @@ const Shop = () => {
           </div>
         </aside>
 
-        {/* MAIN: Grilla de Productos (Derecha) */}
+        {/* MAIN: Grilla de Productos */}
         <div className="flex-1">
           {loading ? (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
@@ -127,7 +142,7 @@ const Shop = () => {
           ) : products.length === 0 ? (
             <div className="text-center py-20 bg-neutral-50 rounded-3xl">
               <p className="text-xl text-neutral-500">
-                No encontramos productos en esta sección.
+                Aún no hay productos en esta sección.
               </p>
               <Link
                 to="/productos"
@@ -141,7 +156,7 @@ const Shop = () => {
               {products.map((product) => (
                 <div
                   key={product._id}
-                  className="bg-white rounded-2xl border border-neutral-100 overflow-hidden group hover:shadow-xl transition-all duration-300"
+                  className="bg-white rounded-2xl border border-neutral-100 overflow-hidden group hover:shadow-xl transition-all duration-300 flex flex-col"
                 >
                   <div className="relative aspect-square overflow-hidden bg-neutral-50">
                     <img
@@ -150,16 +165,38 @@ const Shop = () => {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
-                  <div className="p-4">
+                  <div className="p-4 flex-1 flex flex-col">
                     <h3 className="font-bold text-neutral-800 truncate mb-1">
                       {product.name}
                     </h3>
-                    <p className="text-primary-600 font-black text-lg">
-                      ${product.price.toLocaleString("es-CO")}
-                    </p>
-                    <button className="w-full mt-4 bg-neutral-800 text-white py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary-500 transition-colors">
+
+                    <div className="mt-auto pt-2">
+                      {product.isWeeklyOffer && product.offerDiscount > 0 ? (
+                        <div className="flex items-end gap-2">
+                          <span className="text-primary-600 font-black text-lg">
+                            $
+                            {(
+                              product.price -
+                              (product.price * product.offerDiscount) / 100
+                            ).toLocaleString("es-CO")}
+                          </span>
+                          <span className="text-xs text-neutral-400 line-through mb-1">
+                            ${product.price.toLocaleString("es-CO")}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-primary-600 font-black text-lg">
+                          ${product.price.toLocaleString("es-CO")}
+                        </p>
+                      )}
+                    </div>
+
+                    <Link
+                      to={`/producto/${product._id}`}
+                      className="w-full mt-4 bg-neutral-800 text-white py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary-500 transition-colors"
+                    >
                       <FiShoppingCart /> Ver Detalle
-                    </button>
+                    </Link>
                   </div>
                 </div>
               ))}

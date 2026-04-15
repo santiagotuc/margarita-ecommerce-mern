@@ -21,8 +21,8 @@ const CategoryCards = () => {
           {activeCategories.map((cat) => (
             <Link
               key={cat._id}
-              to={`/productos?categoria=${cat._id}`}
-              className="group relative h-80 overflow-hidden rounded-2xl shadow-md"
+              to={`/categoria/${cat.slug}`}
+              className="group relative h-80 overflow-hidden rounded-2xl shadow-md block"
             >
               {/* Imagen de fondo */}
               <img
@@ -36,10 +36,10 @@ const CategoryCards = () => {
 
               {/* Texto al centro */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-6">
-                <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 transform group-hover:-translate-y-1 transition-transform">
+                <h3 className="text-2xl font-black uppercase tracking-tighter mb-2 transform group-hover:-translate-y-1 transition-transform text-center">
                   {cat.name}
                 </h3>
-                <span className="bg-white text-neutral-900 px-6 py-2 rounded-full text-xs font-bold uppercase opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                <span className="bg-white text-neutral-900 px-6 py-2 rounded-full text-xs font-bold uppercase opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-lg">
                   Ver Colección
                 </span>
               </div>

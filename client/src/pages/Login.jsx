@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight } from "react-icons/fi";
+import {
+  FiMail,
+  FiLock,
+  FiEye,
+  FiEyeOff,
+  FiArrowRight,
+  FiArrowLeft,
+} from "react-icons/fi";
 import api from "../services/api";
 import { login } from "../store/authSlice";
 
@@ -72,6 +79,17 @@ const Login = () => {
       <div
         className={`relative z-10 w-full max-w-md ${mounted ? "animate-slide-up" : "opacity-0"}`}
       >
+        {/* BOTÓN VOLVER AL INICIO (NUEVO) */}
+        <Link
+          to="/"
+          className="absolute top-6 left-6 flex items-center gap-2 text-neutral-400 hover:text-primary-600 transition-colors font-bold text-sm bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-full border border-neutral-100 shadow-sm z-20"
+        >
+          <FiArrowLeft size={16} />{" "}
+          <span className="hidden sm:inline">Inicio</span>
+        </Link>
+        <div className="text-center mb-8 mt-4">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent mb-2"></h1>
+        </div>
         {/* Logo flotante */}
         <div className="flex justify-center mb-8">
           <div className="relative">
@@ -86,7 +104,7 @@ const Login = () => {
         </div>
 
         {/* Formulario */}
-        <div className="glass rounded-3xl shadow-2xl p-8 md:p-10">
+        <div className="glass rounded-3xl shadow-2xl p-8 md:p-10 bg-white/80 backdrop-blur-lg">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent mb-2">
               Bienvenida
@@ -118,7 +136,7 @@ const Login = () => {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className="w-full pl-12 pr-4 py-4 bg-white/50 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all outline-none text-neutral-700 placeholder-neutral-400"
-                  placeholder="ari@margarita.com"
+                  placeholder="ejemplo@correo.com"
                   required
                 />
               </div>
@@ -192,18 +210,18 @@ const Login = () => {
               </span>
             </button>
           </form>
-        </div>
 
-        {/* Footer */}
-        <p className="text-center mt-8 text-neutral-500 text-sm">
-          ¿Necesitas ayuda?{" "}
-          <Link
-            to="#"
-            className="text-primary-500 hover:text-primary-600 font-medium"
-          >
-            Contactar soporte
-          </Link>
-        </p>
+          {/* ENLACE AL REGISTRO (NUEVO) */}
+          <p className="text-center mt-8 text-neutral-500 text-sm border-t border-neutral-100 pt-6">
+            ¿Aún no tienes una cuenta?{" "}
+            <Link
+              to="/registrarse"
+              className="text-primary-500 hover:text-primary-600 font-bold hover:underline"
+            >
+              Regístrate aquí
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

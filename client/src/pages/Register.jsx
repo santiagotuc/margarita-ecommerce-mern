@@ -3,11 +3,11 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   FiMail,
   FiLock,
-  FiUser,
   FiEye,
   FiEyeOff,
   FiArrowRight,
   FiCheckCircle,
+  FiArrowLeft,
 } from "react-icons/fi";
 import api from "../services/api";
 
@@ -54,7 +54,7 @@ const Register = () => {
 
       setSuccess(true);
       setTimeout(() => {
-        navigate("/login");
+        navigate("/ingresar");
       }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || "Error al crear la cuenta");
@@ -82,7 +82,7 @@ const Register = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center p-4 py-12">
       {/* Fondo animado */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
@@ -93,6 +93,22 @@ const Register = () => {
       </div>
 
       <div className="relative z-10 w-full max-w-md animate-slide-up">
+        {/* BOTÓN VOLVER AL INICIO (NUEVO) */}
+        <Link
+          to="/"
+          className="absolute top-6 left-6 flex items-center gap-2 text-neutral-400 hover:text-primary-600 transition-colors font-bold text-sm bg-white hover:bg-neutral-50 px-3 py-1.5 rounded-full border border-neutral-100 shadow-sm z-20"
+        >
+          <FiArrowLeft size={16} />{" "}
+          <span className="hidden sm:inline">Inicio</span>
+        </Link>
+
+        <div className="text-center mb-6 mt-2">
+          <h1 className="text-2xl font-bold text-neutral-800">Crear Cuenta</h1>
+          <p className="text-neutral-500 text-sm">
+            Únete a la familia Margarita
+          </p>
+        </div>
+
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="relative">
@@ -131,7 +147,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, firstName: e.target.value })
                   }
-                  className="w-full p-3 border rounded-lg text-sm"
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-400 outline-none"
                   placeholder="Ari"
                   required
                 />
@@ -146,7 +162,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, lastName: e.target.value })
                   }
-                  className="w-full p-3 border rounded-lg text-sm"
+                  className="w-full p-3 border border-neutral-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-400 outline-none"
                   placeholder="Rivarola"
                   required
                 />
@@ -165,7 +181,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg"
+                  className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-400 outline-none"
                   placeholder="tu@email.com"
                   required
                 />
@@ -184,7 +200,7 @@ const Register = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
                   }
-                  className="w-full pl-10 pr-10 py-3 border rounded-lg"
+                  className="w-full pl-10 pr-10 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-400 outline-none"
                   placeholder="••••••••"
                   required
                 />
@@ -208,7 +224,7 @@ const Register = () => {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full px-4 py-3 border rounded-lg"
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-400 outline-none"
                 placeholder="••••••••"
                 required
               />
@@ -217,7 +233,7 @@ const Register = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary-500 text-white py-3 rounded-lg font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-primary-500 text-white py-3 rounded-xl font-bold hover:bg-primary-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2 shadow-lg"
             >
               {loading ? (
                 "Creando cuenta..."
@@ -229,11 +245,12 @@ const Register = () => {
             </button>
           </form>
 
-          <p className="text-center mt-6 text-sm text-neutral-600">
+          {/* ENLACE AL LOGIN (NUEVO) */}
+          <p className="text-center mt-6 text-sm text-neutral-500 border-t border-neutral-100 pt-6">
             ¿Ya tienes cuenta?{" "}
             <Link
-              to="/login"
-              className="text-primary-500 font-medium hover:underline"
+              to="/ingresar"
+              className="text-primary-500 font-bold hover:underline"
             >
               Ingresa aquí
             </Link>

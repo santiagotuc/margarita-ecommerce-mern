@@ -1,305 +1,271 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../store/authSlice";
 import { useSite } from "../context/SiteContext";
+import { useCart } from "../context/CartContext"; // <-- 1. Importamos el Carrito
 import {
-  FiSearch,
   FiShoppingCart,
+  FiUser,
   FiMenu,
   FiX,
   FiChevronDown,
-  FiPhone,
-  FiMail,
-  FiUser,
   FiLogOut,
+  FiSettings,
 } from "react-icons/fi";
+import { logout } from "../store/authSlice";
 
 const Header = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const { categories, contact, logo, siteName } = useSite();
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
+  const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { contact, categories, siteName } = useSite();
 
-  const activeCategories = categories?.filter((cat) => cat.isActive) || [];
+  // 2. Extraemos el contador y la función para abrir el carrito lateral
+  const { cartCount, setIsCartOpen } = useCart();
 
-  const menuItems =
-    activeCategories.length > 0
-      ? activeCategories
-      : [
-          { name: "MOCHILAS", slug: "mochilas" },
-          { name: "BOTELLAS", slug: "botellas" },
-          { name: "KITS ESCOLARES", slug: "kits-escolares" },
-          { name: "LIBRETAS", slug: "libretas" },
-          { name: "ACCESORIOS", slug: "accesorios" },
-        ];
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Cerrar menús al cambiar de ruta
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setProductsOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     dispatch(logout());
-    localStorage.removeItem("token");
     navigate("/");
   };
 
+  const activeCategories = categories.filter((c) => c.isActive);
+
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
-      {/* Barra superior */}
-      <div className="bg-primary-500 text-white py-2 px-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center text-sm">
+    <>
+      {/* Top Bar - Contact Info */}
+      <div className="bg-primary-500 text-white text-xs py-2 px-4 hidden md:block">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <FiMail size={14} />
-              {contact?.email || "e-mail@margarita27.com"}
-            </span>
-            <span className="flex items-center gap-1">
-              <FiPhone size={14} />
-              {contact?.phone || "(913) 956-3938"}
-            </span>
+            {contact?.email && <span>{contact.email}</span>}
+            {contact?.phone && <span>{contact.phone}</span>}
           </div>
-          <div className="hidden md:flex items-center gap-2">
-            <span>🚚 Envíos gratis en compras mayores a $50.000</span>
+          <div className="flex items-center gap-4 font-medium tracking-wide">
+            <span>ENVÍOS A TODO EL PAÍS</span>
+            <span>COMPRA 100% SEGURA</span>
           </div>
         </div>
       </div>
 
-      {/* Header principal */}
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <div className="flex items-center justify-between gap-4">
+      {/* Main Header */}
+      <header
+        className={`sticky top-0 z-40 w-full transition-all duration-300 ${
+          isScrolled
+            ? "bg-white/90 backdrop-blur-md shadow-sm py-3"
+            : "bg-white py-5"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden text-neutral-800"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+          </button>
+
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            {logo ? (
-              <img
-                src={logo}
-                alt="Logo"
-                className="w-16 h-16 rounded-full object-cover shadow-lg"
-              />
-            ) : (
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-300 to-primary-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                M
-              </div>
-            )}
-            <div className="hidden sm:block">
-              <h1 className="text-2xl font-bold text-primary-600">
-                {siteName?.split("By")[0] || "Margarita"}
-              </h1>
-              <p className="text-xs text-neutral-500">
-                {siteName?.includes("By")
-                  ? siteName.split("By")[1]
-                  : "By Ari Rivarola"}
-              </p>
-            </div>
+          <Link
+            to="/"
+            className="text-2xl font-black text-neutral-800 tracking-tighter"
+          >
+            {siteName || "MARGARITA"}
+            <span className="text-primary-500">.</span>
           </Link>
 
-          {/* Navegación desktop */}
-          <nav className="hidden lg:flex items-center gap-6">
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-8">
             <Link
               to="/"
-              className="text-neutral-800 hover:text-primary-500 font-medium"
+              className="text-neutral-800 hover:text-primary-500 font-medium transition-colors"
             >
               INICIO
             </Link>
 
-            {/* Menú desplegable */}
-            <div className="relative">
+            {/* Categorías Dropdown */}
+            <div className="relative group">
               <button
                 onClick={() => setProductsOpen(!productsOpen)}
-                className="flex items-center gap-1 text-neutral-800 hover:text-primary-500 font-medium"
+                className="flex items-center gap-1 text-neutral-800 hover:text-primary-500 font-medium transition-colors"
               >
                 CATEGORÍAS <FiChevronDown />
               </button>
 
-              {productsOpen && (
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-neutral-200 py-2">
-                  {menuItems.map((item) => (
-                    <Link
-                      key={item._id || item.slug}
-                      to={`/categoria/${item.slug}`}
-                      className="block px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-600"
-                      onClick={() => setProductsOpen(false)}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
-              )}
+              {/* Dropdown Menu */}
+              <div
+                className={`absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 transition-all duration-200 ${productsOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"}`}
+              >
+                <Link
+                  to="/productos"
+                  className="block px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-600 font-bold border-b border-neutral-50 mb-1"
+                >
+                  Ver Todo el Catálogo
+                </Link>
+                {activeCategories.map((cat) => (
+                  <Link
+                    key={cat._id}
+                    to={`/categoria/${cat.slug}`}
+                    className="block px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 hover:text-primary-500 transition-colors"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
             </div>
 
             <Link
               to="/nosotros"
-              className="text-neutral-800 hover:text-primary-500 font-medium"
+              className="text-neutral-800 hover:text-primary-500 font-medium transition-colors"
             >
-              SOBRE NOSOTROS
+              NOSOTROS
             </Link>
             <Link
               to="/contacto"
-              className="text-neutral-800 hover:text-primary-500 font-medium"
+              className="text-neutral-800 hover:text-primary-500 font-medium transition-colors"
             >
               CONTACTO
             </Link>
           </nav>
 
-          {/* Buscador, carrito y usuario */}
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center bg-neutral-100 rounded-full px-4 py-2">
-              <input
-                type="text"
-                placeholder="Buscar..."
-                className="bg-transparent outline-none text-sm w-32 lg:w-48"
-              />
-              <FiSearch className="text-neutral-500" />
-            </div>
-
-            <button className="relative p-2 hover:bg-neutral-100 rounded-full">
-              <FiShoppingCart className="text-xl text-neutral-700" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center">
-                0
-              </span>
-            </button>
-
-            {/* BOTÓN DE LOGIN o MENÚ DE USUARIO */}
-            {isAuthenticated ? (
-              <div className="relative">
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 p-2 hover:bg-neutral-100 rounded-full"
-                >
-                  <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                    <FiUser className="text-primary-600" />
-                  </div>
-                  <span className="hidden md:block text-sm font-medium text-neutral-700">
-                    {user?.firstName}
-                  </span>
-                  <FiChevronDown size={14} />
-                </button>
-
-                {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-neutral-200 py-2">
-                    {user?.role === "admin" && (
-                      <>
-                        <Link
-                          to="/admin"
-                          className="block px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          Panel Admin
-                        </Link>
-                        <div className="border-t border-neutral-100 my-1"></div>
-                      </>
-                    )}
-                    <Link
-                      to="/perfil/editar"
-                      className="block px-4 py-2 text-sm text-neutral-700 hover:bg-primary-50"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      Editar Perfil
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <FiLogOut size={14} />
-                      Cerrar Sesión
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <Link
-                  to="/registrarse"
-                  className="hidden md:block text-primary-600 font-medium hover:text-primary-700"
-                >
-                  Registrarse
-                </Link>
-                <Link
-                  to="/ingresar"
-                  className="bg-primary-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-primary-600 transition-colors"
-                >
-                  Ingresar
-                </Link>
-              </>
-            )}
-
-            {/* Menú móvil */}
+          {/* Icons (Desktop & Mobile) */}
+          <div className="flex items-center gap-5">
+            {/* 3. BOTÓN DEL CARRITO CON BURBUJA */}
             <button
-              className="lg:hidden p-2 hover:bg-neutral-100 rounded-full"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => setIsCartOpen(true)}
+              className="text-neutral-800 hover:text-primary-500 transition-colors relative"
             >
-              {mobileMenuOpen ? (
-                <FiX className="text-xl" />
-              ) : (
-                <FiMenu className="text-xl" />
+              <FiShoppingCart size={22} />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-primary-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                  {cartCount}
+                </span>
               )}
             </button>
+
+            {user ? (
+              <div className="hidden md:flex items-center gap-3">
+                <Link
+                  to="/admin"
+                  className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-sm"
+                >
+                  {user.firstName ? user.firstName[0] : "A"}
+                </Link>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-neutral-800">
+                    {user.firstName}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="text-[10px] text-neutral-500 hover:text-red-500 text-left uppercase font-bold tracking-wider"
+                  >
+                    Salir
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link
+                to="/ingresar"
+                className="hidden md:block text-neutral-800 hover:text-primary-500 transition-colors"
+              >
+                <FiUser size={22} />
+              </Link>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Menú móvil */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-t border-neutral-200 px-4 py-4">
-          <nav className="flex flex-col gap-3">
-            <Link to="/" className="py-2 text-neutral-800 font-medium">
+        {/* Mobile Menu Overlay */}
+        <div
+          className={`md:hidden absolute top-full left-0 w-full bg-white border-t border-neutral-100 shadow-xl transition-all duration-300 ${mobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible h-0 overflow-hidden"}`}
+        >
+          <div className="p-4 flex flex-col gap-4">
+            <Link
+              to="/"
+              className="font-bold text-neutral-800 py-2 border-b border-neutral-50"
+            >
               INICIO
             </Link>
-            <p className="font-medium text-neutral-600 mt-2">CATEGORÍAS</p>
-            {menuItems.map((item) => (
-              <Link
-                key={item._id || item.slug}
-                to={`/categoria/${item.slug}`}
-                className="py-2 pl-4 text-neutral-600 text-sm"
-              >
-                {item.name}
-              </Link>
-            ))}
-            {!isAuthenticated ? (
-              <>
+
+            <div>
+              <p className="font-bold text-neutral-400 text-xs mb-2">
+                CATEGORÍAS
+              </p>
+              <div className="flex flex-col gap-2 pl-4 border-l-2 border-primary-100">
                 <Link
-                  to="/ingresar"
-                  className="py-2 text-primary-600 font-medium"
+                  to="/productos"
+                  className="text-neutral-800 font-bold py-1"
                 >
-                  Ingresar
+                  Ver Todo
                 </Link>
-                <Link
-                  to="/registrarse"
-                  className="py-2 text-primary-600 font-medium"
-                >
-                  Registrarse
-                </Link>
-              </>
-            ) : (
-              <>
-                <div className="border-t border-neutral-200 my-2"></div>
-                <p className="font-medium text-neutral-600">Mi Cuenta</p>
-                {user?.role === "admin" && (
+                {activeCategories.map((cat) => (
                   <Link
-                    to="/admin"
-                    className="py-2 pl-4 text-neutral-600 text-sm"
+                    key={cat._id}
+                    to={`/categoria/${cat.slug}`}
+                    className="text-neutral-600 py-1"
                   >
-                    Panel Admin
+                    {cat.name}
                   </Link>
-                )}
+                ))}
+              </div>
+            </div>
+
+            <Link
+              to="/nosotros"
+              className="font-bold text-neutral-800 py-2 border-b border-neutral-50"
+            >
+              NOSOTROS
+            </Link>
+            <Link
+              to="/contacto"
+              className="font-bold text-neutral-800 py-2 border-b border-neutral-50"
+            >
+              CONTACTO
+            </Link>
+
+            {user ? (
+              <div className="mt-4 pt-4 border-t border-neutral-100 flex flex-col gap-3">
                 <Link
-                  to="/perfil/editar"
-                  className="py-2 pl-4 text-neutral-600 text-sm"
+                  to="/admin"
+                  className="flex items-center gap-2 text-primary-600 font-bold bg-primary-50 p-3 rounded-lg"
                 >
-                  Editar Perfil
+                  <FiSettings /> Panel de Administración
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="py-2 pl-4 text-red-600 text-sm text-left"
+                  className="flex items-center gap-2 text-red-500 font-bold p-3"
                 >
-                  Cerrar Sesión
+                  <FiLogOut /> Cerrar Sesión
                 </button>
-              </>
+              </div>
+            ) : (
+              <Link
+                to="/ingresar"
+                className="mt-4 flex items-center justify-center gap-2 bg-neutral-800 text-white p-3 rounded-lg font-bold"
+              >
+                <FiUser /> Iniciar Sesión (Admin)
+              </Link>
             )}
-          </nav>
+          </div>
         </div>
-      )}
-    </header>
+      </header>
+    </>
   );
 };
 

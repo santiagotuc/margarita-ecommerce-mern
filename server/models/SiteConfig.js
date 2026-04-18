@@ -66,8 +66,8 @@ const siteConfigSchema = new mongoose.Schema(
         enabled: { type: Boolean, default: true },
       },
       featured: {
-        title: { type: String, default: "Kits Escolares" },
-        subtitle: { type: String, default: "Todo en uno" },
+        title: { type: String, default: "KIT DE OFERTAS" }, // Antes decía Kits Escolares
+        subtitle: { type: String, default: "Aprovecha nuestros combos" },
         enabled: { type: Boolean, default: true },
       },
       collection: {

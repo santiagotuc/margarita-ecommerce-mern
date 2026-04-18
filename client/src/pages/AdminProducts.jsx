@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import heic2any from "heic2any";
-import Modal from "../components/Modal"; // <-- IMPORTAMOS TU MODAL
+import Modal from "../components/Modal";
 import {
   FiPlus,
   FiEdit,
@@ -13,10 +13,8 @@ import {
   FiX,
   FiCheck,
   FiPackage,
-  FiTag,
   FiDollarSign,
   FiGrid,
-  FiStar,
 } from "react-icons/fi";
 
 const AdminProducts = () => {
@@ -27,19 +25,20 @@ const AdminProducts = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [previewImages, setPreviewImages] = useState([]);
 
-  // ESTADO DEL MODAL
   const [modalConfig, setModalConfig] = useState({ isOpen: false });
 
+  // NOTA: 'categories' ahora es un array [] y agregamos 'isKitMargarita'
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
     description: "",
     price: "",
     stock: "",
-    category: "",
+    categories: [],
     minStockAlert: 5,
     isNewArrival: false,
     isWeeklyOffer: false,
+    isKitMargarita: false,
     offerDiscount: 0,
     featured: false,
     isActive: true,
@@ -50,12 +49,8 @@ const AdminProducts = () => {
   const navigate = useNavigate();
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [newCategory, setNewCategory] = useState({
-    name: "",
-    description: "",
-  });
+  const [newCategory, setNewCategory] = useState({ name: "", description: "" });
 
-  // Función ayudante para lanzar el Modal fácilmente
   const showModal = (type, title, message) => {
     setModalConfig({ isOpen: true, type, title, message });
   };
@@ -80,9 +75,7 @@ const AdminProducts = () => {
     try {
       const res = await api.get("/categories");
       setCategories(res.data.filter((cat) => cat.isActive));
-    } catch (error) {
-      // Omitimos consola para mantener todo limpio
-    }
+    } catch (error) {}
   };
 
   const handleImageChange = async (e) => {
@@ -95,7 +88,6 @@ const AdminProducts = () => {
       );
       return;
     }
-
     setConverting(true);
     const processedFiles = [];
     const previews = [];
@@ -105,22 +97,18 @@ const AdminProducts = () => {
         const isHeic =
           file.type === "image/heic" ||
           file.type === "image/heif" ||
-          file.name.toLowerCase().endsWith(".heic") ||
-          file.name.toLowerCase().endsWith(".heif");
-
+          file.name.toLowerCase().endsWith(".heic");
         if (isHeic) {
           const convertedBlob = await heic2any({
             blob: file,
             toType: "image/jpeg",
             quality: 0.8,
           });
-
           const convertedFile = new File(
             [convertedBlob],
             file.name.replace(/\.(heic|heif)$/i, ".jpg"),
             { type: "image/jpeg" },
           );
-
           processedFiles.push(convertedFile);
           previews.push(URL.createObjectURL(convertedBlob));
         } else {
@@ -128,7 +116,6 @@ const AdminProducts = () => {
           previews.push(URL.createObjectURL(file));
         }
       }
-
       setSelectedFiles(processedFiles);
       setPreviewImages(previews);
     } catch (error) {
@@ -146,13 +133,15 @@ const AdminProducts = () => {
     e.preventDefault();
     try {
       const { data } = await api.post("/categories", newCategory);
-
       setCategories([...categories, data.category]);
-      setFormData({ ...formData, category: data.category._id });
 
+      // La agregamos automáticamente a las seleccionadas
+      setFormData({
+        ...formData,
+        categories: [...formData.categories, data.category._id],
+      });
       setShowCategoryModal(false);
       setNewCategory({ name: "", description: "" });
-
       showModal("success", "¡Listo!", "Categoría creada exitosamente");
     } catch (error) {
       showModal(
@@ -165,17 +154,29 @@ const AdminProducts = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.categories.length === 0) {
+      showModal(
+        "warning",
+        "Atención",
+        "Debes seleccionar al menos una categoría",
+      );
+      return;
+    }
 
     try {
       const data = new FormData();
-
       Object.keys(formData).forEach((key) => {
-        data.append(key, formData[key]);
+        if (key === "categories") {
+          // Adjuntamos múltiples categorías al FormData
+          formData.categories.forEach((catId) =>
+            data.append("categories", catId),
+          );
+        } else {
+          data.append(key, formData[key]);
+        }
       });
 
-      selectedFiles.forEach((file) => {
-        data.append("images", file);
-      });
+      selectedFiles.forEach((file) => data.append("images", file));
 
       if (editingProduct) {
         await api.put(`/products/${editingProduct._id}`, data);
@@ -188,7 +189,6 @@ const AdminProducts = () => {
         await api.post("/products", data);
         showModal("success", "¡Creado!", "Producto publicado exitosamente");
       }
-
       resetForm();
       fetchProducts();
     } catch (error) {
@@ -208,10 +208,14 @@ const AdminProducts = () => {
       description: product.description,
       price: product.price,
       stock: product.stock,
-      category: product.category?._id || product.category,
+      // Adaptamos para que lea el array de categorías
+      categories:
+        product.categories?.map((c) => c._id || c) ||
+        (product.category ? [product.category._id || product.category] : []),
       minStockAlert: product.minStockAlert,
       isNewArrival: product.isNewArrival,
       isWeeklyOffer: product.isWeeklyOffer,
+      isKitMargarita: product.isKitMargarita || false,
       offerDiscount: product.offerDiscount,
       featured: product.featured,
       isActive: product.isActive,
@@ -221,24 +225,18 @@ const AdminProducts = () => {
     window.scrollTo(0, 0);
   };
 
-  // REEMPLAZAMOS EL WINDOW.CONFIRM POR EL MODAL
   const handleDelete = (id) => {
     setModalConfig({
       isOpen: true,
       type: "warning",
       title: "Eliminar Producto",
-      message:
-        "¿Estás segura de que quieres eliminar este producto? Esta acción no se puede deshacer.",
+      message: "¿Estás segura de que quieres eliminar este producto?",
       actionText: "Sí, Eliminar",
       onAction: async () => {
         try {
           await api.delete(`/products/${id}`);
           fetchProducts();
-          showModal(
-            "success",
-            "Eliminado",
-            "El producto fue eliminado de la tienda.",
-          );
+          showModal("success", "Eliminado", "El producto fue eliminado.");
         } catch (error) {
           showModal("error", "Error", "Error al intentar eliminar el producto");
         }
@@ -255,13 +253,12 @@ const AdminProducts = () => {
     }
   };
 
-  // REEMPLAZAMOS EL WINDOW.CONFIRM POR EL MODAL
   const deleteImage = (productId, imageIndex) => {
     setModalConfig({
       isOpen: true,
       type: "warning",
       title: "Quitar Imagen",
-      message: "¿Segura que deseas borrar esta foto del producto?",
+      message: "¿Segura que deseas borrar esta foto?",
       actionText: "Borrar Foto",
       onAction: async () => {
         try {
@@ -274,7 +271,6 @@ const AdminProducts = () => {
             setEditingProduct({ ...editingProduct, images: updatedImages });
             setPreviewImages(updatedImages);
           }
-          // Cerramos el modal
           setModalConfig({ isOpen: false });
         } catch (error) {
           showModal("error", "Error", "No se pudo eliminar la imagen");
@@ -290,10 +286,11 @@ const AdminProducts = () => {
       description: "",
       price: "",
       stock: "",
-      category: "",
+      categories: [],
       minStockAlert: 5,
       isNewArrival: false,
       isWeeklyOffer: false,
+      isKitMargarita: false,
       offerDiscount: 0,
       featured: false,
       isActive: true,
@@ -317,7 +314,6 @@ const AdminProducts = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6">
-      {/* AQUÍ MONTAMOS EL MODAL PARA TODA LA PÁGINA */}
       <Modal
         {...modalConfig}
         onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
@@ -336,12 +332,11 @@ const AdminProducts = () => {
           onClick={() => setShowForm(!showForm)}
           className="bg-primary-500 text-white px-6 py-3 rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-2 shadow-lg"
         >
-          {showForm ? <FiX /> : <FiPlus />}
+          {showForm ? <FiX /> : <FiPlus />}{" "}
           {showForm ? "Cancelar" : "Nuevo Producto"}
         </button>
       </div>
 
-      {/* Formulario de Producto */}
       {showForm && (
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-neutral-200">
           <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
@@ -353,7 +348,6 @@ const AdminProducts = () => {
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
-            {/* Nombre */}
             <div className="md:col-span-2">
               <label className="block font-medium mb-2 text-sm">
                 Nombre del Producto *
@@ -365,12 +359,10 @@ const AdminProducts = () => {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                placeholder="Ej: Mochila Escolar Unicornio"
                 required
               />
             </div>
 
-            {/* SKU */}
             <div>
               <label className="block font-medium mb-2 text-sm">
                 SKU (Código) *
@@ -385,48 +377,10 @@ const AdminProducts = () => {
                   })
                 }
                 className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none uppercase"
-                placeholder="Ej: MOC-001"
                 required
               />
             </div>
 
-            {/* Categoría con botón de crear rápido */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block font-medium text-sm">Categoría *</label>
-                <button
-                  type="button"
-                  onClick={() => setShowCategoryModal(true)}
-                  className="text-primary-500 text-sm hover:text-primary-600 flex items-center gap-1 font-medium"
-                >
-                  <FiPlus size={16} /> Crear nueva categoría
-                </button>
-              </div>
-
-              <select
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({ ...formData, category: e.target.value })
-                }
-                className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                required
-              >
-                <option value="">Seleccionar categoría</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-
-              {categories.length === 0 && (
-                <p className="text-xs text-red-500 mt-1">
-                  No hay categorías creadas. Crea una primero.
-                </p>
-              )}
-            </div>
-
-            {/* Precio */}
             <div>
               <label className="block font-medium mb-2 text-sm">Precio *</label>
               <div className="relative">
@@ -438,14 +392,54 @@ const AdminProducts = () => {
                     setFormData({ ...formData, price: e.target.value })
                   }
                   className="w-full pl-10 pr-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                  placeholder="25000"
                   min="0"
                   required
                 />
               </div>
             </div>
 
-            {/* Stock */}
+            {/* Selector de Multi-Categorías */}
+            <div className="md:col-span-2 bg-neutral-50 p-4 rounded-xl border border-neutral-200">
+              <div className="flex justify-between items-center mb-3">
+                <label className="block font-bold text-sm text-neutral-700">
+                  Categorías (Puedes elegir varias) *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="text-primary-500 text-sm hover:text-primary-600 flex items-center gap-1 font-medium"
+                >
+                  <FiPlus size={16} /> Crear nueva
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {categories.map((cat) => (
+                  <label
+                    key={cat._id}
+                    className="flex items-center gap-2 p-2 bg-white rounded-lg border border-neutral-100 shadow-sm cursor-pointer hover:bg-primary-50 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.categories?.includes(cat._id)}
+                      onChange={(e) => {
+                        const current = formData.categories || [];
+                        setFormData({
+                          ...formData,
+                          categories: e.target.checked
+                            ? [...current, cat._id]
+                            : current.filter((id) => id !== cat._id),
+                        });
+                      }}
+                      className="w-4 h-4 text-primary-500 rounded"
+                    />
+                    <span className="text-sm font-medium text-neutral-700 line-clamp-1">
+                      {cat.name}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             <div>
               <label className="block font-medium mb-2 text-sm">Stock *</label>
               <input
@@ -455,13 +449,11 @@ const AdminProducts = () => {
                   setFormData({ ...formData, stock: e.target.value })
                 }
                 className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                placeholder="10"
                 min="0"
                 required
               />
             </div>
 
-            {/* Descripción */}
             <div className="md:col-span-2">
               <label className="block font-medium mb-2 text-sm">
                 Descripción *
@@ -473,12 +465,10 @@ const AdminProducts = () => {
                 }
                 rows="3"
                 className="w-full px-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none resize-none"
-                placeholder="Descripción detallada del producto..."
                 required
               />
             </div>
 
-            {/* Imágenes */}
             <div className="md:col-span-2">
               <label className="block font-medium mb-2 text-sm flex items-center gap-2">
                 <FiImage /> Imágenes {editingProduct ? "(Agregar nuevas)" : "*"}
@@ -489,22 +479,18 @@ const AdminProducts = () => {
                 accept="image/*,.heic,.heif"
                 onChange={handleImageChange}
                 disabled={converting}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border border-neutral-200 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50"
                 required={!editingProduct}
               />
-
               {converting ? (
                 <p className="text-sm text-blue-500 font-bold mt-2 animate-pulse">
-                  🔄 Transformando fotos de iPhone para la web...
+                  🔄 Transformando fotos...
                 </p>
               ) : (
                 <p className="text-xs text-neutral-500 mt-1">
-                  Máximo 5 imágenes. La primera imagen será la principal. Fotos
-                  de iPhone soportadas automáticamente.
+                  Máximo 5 imágenes. Fotos de iPhone soportadas.
                 </p>
               )}
-
-              {/* Preview de imágenes */}
               {previewImages.length > 0 && (
                 <div className="flex gap-2 mt-3 flex-wrap">
                   {previewImages.map((img, idx) => (
@@ -523,24 +509,17 @@ const AdminProducts = () => {
                           <FiX size={12} />
                         </button>
                       )}
-                      {idx === 0 && (
-                        <span className="absolute bottom-0 left-0 right-0 bg-primary-500 text-white text-xs text-center py-0.5 rounded-b-lg">
-                          Principal
-                        </span>
-                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Opciones adicionales */}
             <div className="md:col-span-2 bg-neutral-50 p-4 rounded-lg">
               <h3 className="font-medium mb-3 flex items-center gap-2">
-                <FiGrid /> Opciones Especiales
+                <FiGrid /> Opciones Especiales y Banners
               </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -555,7 +534,6 @@ const AdminProducts = () => {
                   />
                   <span className="text-sm">🆕 Nueva Llegada</span>
                 </label>
-
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -570,7 +548,21 @@ const AdminProducts = () => {
                   />
                   <span className="text-sm">🏷️ Oferta Semanal</span>
                 </label>
-
+                {/* AQUI ESTA EL CHECK DEL KIT MARGARITA */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isKitMargarita}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        isKitMargarita: e.target.checked,
+                      })
+                    }
+                    className="w-5 h-5 text-primary-500 rounded"
+                  />
+                  <span className="text-sm">🎁 Kit Margarita</span>
+                </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -584,9 +576,8 @@ const AdminProducts = () => {
                 </label>
               </div>
 
-              {/* Descuento */}
               {formData.isWeeklyOffer && (
-                <div className="mt-4">
+                <div className="mt-4 border-t pt-4 border-neutral-200">
                   <label className="block text-sm font-medium mb-1">
                     Descuento (%)
                   </label>
@@ -602,13 +593,11 @@ const AdminProducts = () => {
                     className="w-32 px-3 py-2 border rounded-lg"
                     min="0"
                     max="100"
-                    placeholder="20"
                   />
                 </div>
               )}
             </div>
 
-            {/* Botones */}
             <div className="md:col-span-2 flex gap-4 pt-4 border-t">
               <button
                 type="submit"
@@ -618,7 +607,6 @@ const AdminProducts = () => {
                 <FiCheck />{" "}
                 {editingProduct ? "Actualizar Producto" : "Crear Producto"}
               </button>
-
               <button
                 type="button"
                 onClick={resetForm}
@@ -639,9 +627,6 @@ const AdminProducts = () => {
               <tr>
                 <th className="text-left p-4 font-semibold text-neutral-700">
                   Producto
-                </th>
-                <th className="text-left p-4 font-semibold text-neutral-700">
-                  Categoría
                 </th>
                 <th className="text-left p-4 font-semibold text-neutral-700">
                   Precio
@@ -693,6 +678,11 @@ const AdminProducts = () => {
                               Oferta
                             </span>
                           )}
+                          {product.isKitMargarita && (
+                            <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded">
+                              Kit
+                            </span>
+                          )}
                           {product.featured && (
                             <span className="text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded">
                               ⭐
@@ -701,9 +691,6 @@ const AdminProducts = () => {
                         </div>
                       </div>
                     </div>
-                  </td>
-                  <td className="p-4 text-sm text-neutral-600">
-                    {product.category?.name || "Sin categoría"}
                   </td>
                   <td className="p-4">
                     <div className="font-medium text-neutral-800">
@@ -714,31 +701,18 @@ const AdminProducts = () => {
                           : product.price,
                       )}
                     </div>
-                    {product.isWeeklyOffer && product.offerDiscount > 0 && (
-                      <div className="text-xs text-neutral-400 line-through">
-                        {formatPrice(product.price)}
-                      </div>
-                    )}
                   </td>
                   <td className="p-4">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        product.stock <= product.minStockAlert
-                          ? "bg-red-100 text-red-600"
-                          : "bg-green-100 text-green-600"
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock <= product.minStockAlert ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}
                     >
-                      {product.stock} unidades
+                      {product.stock} un.
                     </span>
                   </td>
                   <td className="p-4">
                     <button
                       onClick={() => toggleActive(product._id)}
-                      className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        product.isActive
-                          ? "bg-green-100 text-green-600 hover:bg-green-200"
-                          : "bg-red-100 text-red-600 hover:bg-red-200"
-                      }`}
+                      className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors ${product.isActive ? "bg-green-100 text-green-600 hover:bg-green-200" : "bg-red-100 text-red-600 hover:bg-red-200"}`}
                     >
                       {product.isActive ? (
                         <FiEye size={12} />
@@ -752,15 +726,13 @@ const AdminProducts = () => {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEdit(product)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Editar"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                       >
                         <FiEdit size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(product._id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Eliminar"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                       >
                         <FiTrash2 size={18} />
                       </button>
@@ -771,22 +743,9 @@ const AdminProducts = () => {
             </tbody>
           </table>
         </div>
-
-        {products.length === 0 && (
-          <div className="text-center py-12">
-            <FiPackage size={48} className="mx-auto text-neutral-300 mb-4" />
-            <p className="text-neutral-500">No hay productos aún</p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-4 text-primary-500 hover:underline"
-            >
-              Crear el primer producto
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Modal Crear Categoría Rápida - Limpio y con Z-Index ALTO */}
+      {/* Modal Crear Categoría */}
       {showCategoryModal && (
         <div className="fixed inset-0 bg-neutral-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative">
@@ -796,33 +755,24 @@ const AdminProducts = () => {
             >
               <FiX size={24} />
             </button>
-
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-black flex items-center gap-2 text-neutral-800">
-                <FiPlus className="text-primary-500" />
-                Nueva Categoría
-              </h3>
-            </div>
-
+            <h3 className="text-xl font-black mb-6 flex items-center gap-2">
+              <FiPlus className="text-primary-500" /> Nueva Categoría
+            </h3>
             <form onSubmit={handleQuickCreateCategory} className="space-y-4">
               <div>
-                <label className="block text-sm font-bold mb-1 text-neutral-600">
-                  Nombre *
-                </label>
+                <label className="block text-sm font-bold mb-1">Nombre *</label>
                 <input
                   type="text"
                   value={newCategory.name}
                   onChange={(e) =>
                     setNewCategory({ ...newCategory, name: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
-                  placeholder="Ej: Mochilas"
+                  className="w-full px-4 py-3 border rounded-xl"
                   required
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-bold mb-1 text-neutral-600">
+                <label className="block text-sm font-bold mb-1">
                   Descripción
                 </label>
                 <textarea
@@ -833,20 +783,16 @@ const AdminProducts = () => {
                       description: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none resize-none"
-                  placeholder="Breve descripción..."
+                  className="w-full px-4 py-3 border rounded-xl"
                   rows="2"
                 />
               </div>
-
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  className="w-full bg-primary-500 text-white py-3 rounded-xl hover:bg-primary-600 font-bold shadow-lg"
-                >
-                  Crear Categoría
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="w-full bg-primary-500 text-white py-3 rounded-xl font-bold shadow-lg"
+              >
+                Crear Categoría
+              </button>
             </form>
           </div>
         </div>

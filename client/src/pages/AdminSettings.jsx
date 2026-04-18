@@ -20,6 +20,12 @@ const AdminSettings = () => {
     social: { instagram: "", facebook: "", youtube: "", tiktok: "" },
     aboutUs: { title: "", content: "" },
     hero: { title: "", subtitle: "", image: "" },
+    // AÑADIDO: Inicializamos banners vacíos para que no dé error
+    banners: {
+      newArrivals: { title: "", subtitle: "" },
+      featured: { title: "", subtitle: "" },
+      collection: { title: "", subtitle: "" },
+    },
   });
 
   // Estados para la imagen
@@ -38,6 +44,8 @@ const AdminSettings = () => {
         social: { ...formData.social, ...config.social },
         aboutUs: { ...formData.aboutUs, ...config.aboutUs },
         hero: { ...formData.hero, ...config.hero },
+        // AÑADIDO: Cargamos los banners desde la DB
+        banners: { ...formData.banners, ...config.banners },
       });
       // Si ya hay una imagen guardada, la mostramos en el preview
       if (config.hero?.image) {
@@ -171,6 +179,7 @@ const AdminSettings = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* COLUMNA 1 */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -265,7 +274,7 @@ const AdminSettings = () => {
           </div>
         </div>
 
-        {/* REEMPLAZADO: PORTADA PRINCIPAL CON SUBIDA DE ARCHIVO */}
+        {/* COLUMNA 2 */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -303,7 +312,6 @@ const AdminSettings = () => {
                 />
               </div>
 
-              {/* Nuevo Input de Archivo para la foto */}
               <div>
                 <label className="block font-medium mb-2 text-sm text-neutral-600">
                   Foto de la portada
@@ -322,7 +330,6 @@ const AdminSettings = () => {
                   </p>
                 )}
 
-                {/* Vista previa de la imagen */}
                 {heroImagePreview && (
                   <div className="mt-4 relative rounded-xl overflow-hidden border border-neutral-200">
                     <img
@@ -332,6 +339,134 @@ const AdminSettings = () => {
                     />
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* NUEVO: Configuración de Banners del Inicio */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              🏷️ Títulos de Banners (Inicio)
+            </h2>
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <label className="block font-bold mb-1 text-sm text-blue-800">
+                  Banner 1 (Izquierda)
+                </label>
+                <input
+                  value={formData.banners?.newArrivals?.title || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      banners: {
+                        ...formData.banners,
+                        newArrivals: {
+                          ...formData.banners?.newArrivals,
+                          title: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full p-2 mb-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-300"
+                  placeholder="Ej: Nuevas Llegadas"
+                />
+                <input
+                  value={formData.banners?.newArrivals?.subtitle || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      banners: {
+                        ...formData.banners,
+                        newArrivals: {
+                          ...formData.banners?.newArrivals,
+                          subtitle: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-300 text-neutral-500"
+                  placeholder="Subtítulo..."
+                />
+              </div>
+
+              <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+                <label className="block font-bold mb-1 text-sm text-orange-800">
+                  Banner 2 (Centro - Kits)
+                </label>
+                <input
+                  value={formData.banners?.featured?.title || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      banners: {
+                        ...formData.banners,
+                        featured: {
+                          ...formData.banners?.featured,
+                          title: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full p-2 mb-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-orange-300"
+                  placeholder="Ej: Kit Margarita"
+                />
+                <input
+                  value={formData.banners?.featured?.subtitle || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      banners: {
+                        ...formData.banners,
+                        featured: {
+                          ...formData.banners?.featured,
+                          subtitle: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-orange-300 text-neutral-500"
+                  placeholder="Subtítulo..."
+                />
+              </div>
+
+              <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+                <label className="block font-bold mb-1 text-sm text-red-800">
+                  Banner 3 (Derecha - Ofertas)
+                </label>
+                <input
+                  value={formData.banners?.collection?.title || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      banners: {
+                        ...formData.banners,
+                        collection: {
+                          ...formData.banners?.collection,
+                          title: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full p-2 mb-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-red-300"
+                  placeholder="Ej: Ofertas Semanales"
+                />
+                <input
+                  value={formData.banners?.collection?.subtitle || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      banners: {
+                        ...formData.banners,
+                        collection: {
+                          ...formData.banners?.collection,
+                          subtitle: e.target.value,
+                        },
+                      },
+                    })
+                  }
+                  className="w-full p-2 border rounded-md text-sm outline-none focus:ring-2 focus:ring-red-300 text-neutral-500"
+                  placeholder="Subtítulo..."
+                />
               </div>
             </div>
           </div>

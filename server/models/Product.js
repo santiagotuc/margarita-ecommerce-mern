@@ -9,15 +9,17 @@ const productSchema = new mongoose.Schema(
     },
     sku: {
       type: String,
-      required: [true, "El SKU es obligatorio"],
+
       trim: true,
       unique: true,
     },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: [true, "La categoría es obligatoria"],
-    },
+    categories: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
+        required: [true, "Al menos una categoría es obligatoria"],
+      },
+    ],
     description: {
       type: String,
       required: [true, "La descripción es obligatoria"],

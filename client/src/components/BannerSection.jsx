@@ -1,27 +1,30 @@
 import { Link } from "react-router-dom";
+import { useSite } from "../context/SiteContext";
 
 const BannerSection = () => {
-  // Los links apuntarán a filtros que crearemos en la página de la tienda
+  const { config } = useSite();
+  const bannersConfig = config?.banners || {};
+
   const banners = [
     {
-      title: "Nuevas Llegadas",
-      subtitle: "Lo último en tienda",
+      title: bannersConfig.newArrivals?.title || "Nuevas Llegadas",
+      subtitle: bannersConfig.newArrivals?.subtitle || "Lo último en tienda",
       bg: "bg-gradient-to-br from-blue-50 to-blue-100",
       emoji: "✨",
       color: "text-blue-700",
       link: "/productos?filtro=nuevos",
     },
     {
-      title: "Combos Escolares",
-      subtitle: "Todo en uno",
+      title: bannersConfig.featured?.title || "Kit Margarita",
+      subtitle: bannersConfig.featured?.subtitle || "Todo en uno",
       bg: "bg-gradient-to-br from-orange-50 to-orange-100",
-      emoji: "🎒",
+      emoji: "🎁",
       color: "text-orange-700",
-      link: "/categoria/kits-escolares",
+      link: "/productos?filtro=kits",
     },
     {
-      title: "Ofertas Especiales",
-      subtitle: "Descuentos únicos",
+      title: bannersConfig.collection?.title || "Ofertas Semanales",
+      subtitle: bannersConfig.collection?.subtitle || "Descuentos únicos",
       bg: "bg-gradient-to-br from-red-50 to-red-100",
       emoji: "🔥",
       color: "text-red-700",

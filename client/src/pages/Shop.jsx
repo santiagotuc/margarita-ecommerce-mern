@@ -7,7 +7,7 @@ import { FiShoppingCart, FiFilter, FiX } from "react-icons/fi";
 const Shop = () => {
   const { categories } = useSite();
   const location = useLocation();
-  const { slug } = useParams(); // ¡Atrapamos el nombre de la categoría de la URL!
+  const { slug } = useParams();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,11 +16,9 @@ const Shop = () => {
   const queryParams = new URLSearchParams(location.search);
   const filterType = queryParams.get("filtro");
 
-  // Buscamos la categoría actual para poner el título correcto
   const activeCategory = categories.find((c) => c.slug === slug);
 
   useEffect(() => {
-    // Esperamos a que las categorías carguen en el contexto global antes de buscar productos
     if (!slug || categories.length > 0) {
       fetchProducts();
     }
@@ -31,14 +29,15 @@ const Shop = () => {
     try {
       let url = "/products?";
 
-      // Si estamos en /categoria/botellas, buscamos el ID de "botellas"
       if (slug && categories.length > 0) {
         const cat = categories.find((c) => c.slug === slug);
         if (cat) url += `category=${cat._id}&`;
       }
 
+      // LA SOLUCIÓN ESTÁ AQUÍ: Conectamos los filtros de la URL con el Backend
       if (filterType === "nuevos") url += `newArrivals=true&`;
       if (filterType === "ofertas") url += `offer=true&`;
+      if (filterType === "kits") url += `kitMargarita=true&`; // ¡Conexión lista!
 
       const res = await api.get(url);
       setProducts(res.data.products);
@@ -49,16 +48,21 @@ const Shop = () => {
     }
   };
 
+  // Función para darle un título bonito según el filtro seleccionado
+  const getPageTitle = () => {
+    if (activeCategory) return activeCategory.name;
+    if (filterType === "nuevos") return "Nuevas Llegadas";
+    if (filterType === "kits") return "Kit Margarita";
+    if (filterType === "ofertas") return "Ofertas Semanales";
+    return "Tienda Completa";
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Encabezado */}
       <div className="mb-8 border-b border-neutral-100 pb-6 flex justify-between items-center">
         <h1 className="text-3xl font-black text-neutral-800 uppercase">
-          {activeCategory
-            ? activeCategory.name
-            : filterType
-              ? `Catálogo: ${filterType}`
-              : "Tienda Completa"}
+          {getPageTitle()}
         </h1>
         <button
           onClick={() => setShowMobileFilters(true)}
@@ -97,7 +101,6 @@ const Shop = () => {
                 .filter((c) => c.isActive)
                 .map((cat) => (
                   <li key={cat._id}>
-                    {/* Aquí usamos las URL limpias /categoria/:slug */}
                     <Link
                       to={`/categoria/${cat.slug}`}
                       className={`block py-2 px-4 rounded-xl transition-colors ${slug === cat.slug ? "bg-primary-500 text-white font-bold" : "hover:bg-neutral-100"}`}
@@ -118,11 +121,18 @@ const Shop = () => {
               >
                 ✨ Nuevas Llegadas
               </Link>
+              {/* AGREGO EL FILTRO DE KIT A LA BARRA LATERAL TAMBIÉN */}
+              <Link
+                to="/productos?filtro=kits"
+                className={`block py-2 px-4 rounded-xl transition-colors ${filterType === "kits" ? "bg-orange-500 text-white font-bold" : "hover:bg-neutral-100"}`}
+              >
+                🎁 Kit Margarita
+              </Link>
               <Link
                 to="/productos?filtro=ofertas"
                 className={`block py-2 px-4 rounded-xl transition-colors ${filterType === "ofertas" ? "bg-red-500 text-white font-bold" : "hover:bg-neutral-100"}`}
               >
-                🔥 Ofertas Especiales
+                🔥 Ofertas Semanales
               </Link>
             </div>
           </div>

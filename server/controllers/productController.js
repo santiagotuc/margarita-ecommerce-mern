@@ -25,17 +25,19 @@ exports.getProducts = async (req, res) => {
       newArrivals,
       offer,
       search,
+      kitMargarita, // Agregamos esto para leer el filtro de los Kits
     } = req.query;
 
     const query = { isActive: true };
 
-    // AQUI ESTABA EL ERROR: Cambiamos query.category por query.categories
-    // MongoDB es inteligente: si le pasas un ID a un array (categories), buscará los productos que contengan ese ID dentro de su array.
+    // Búsqueda en el array de categories
     if (category) query.categories = category;
 
     if (featured === "true") query.featured = true;
     if (newArrivals === "true") query.isNewArrival = true;
     if (offer === "true") query.isWeeklyOffer = true;
+    // Búsqueda del Kit Margarita
+    if (kitMargarita === "true") query.isKitMargarita = true;
 
     if (search) {
       query.$or = [
@@ -96,7 +98,6 @@ exports.createProduct = async (req, res) => {
     }
 
     // ASEGURARNOS DE QUE LAS CATEGORÍAS SEAN UN ARRAY
-    // Cuando se envía un solo checkbox por FormData, a veces llega como String en lugar de Array.
     if (productData.categories && !Array.isArray(productData.categories)) {
       productData.categories = [productData.categories];
     }
@@ -156,7 +157,6 @@ exports.updateProduct = async (req, res) => {
       if (req.body.replaceImages === "true") {
         productData.images = req.files.map((file) => file.path);
       } else {
-        // Agregar a las existentes
         const newImages = req.files.map((file) => file.path);
         productData.images = [...product.images, ...newImages];
       }
@@ -177,7 +177,6 @@ exports.updateProduct = async (req, res) => {
       productData.featured === "true" || productData.featured === true;
     productData.isActive =
       productData.isActive === "true" || productData.isActive === true;
-    // Agregamos Kit Margarita
     productData.isKitMargarita =
       productData.isKitMargarita === "true" ||
       productData.isKitMargarita === true;

@@ -7,26 +7,26 @@ const enrichCategoriesWithImages = async (categories) => {
   for (let cat of categories) {
     const catObj = cat.toObject ? cat.toObject() : cat;
 
-    // Buscar hasta 5 productos de esta categoría para el slideshow
+    // AQUI ESTABA EL ERROR: Cambiamos category por categories
     const products = await Product.find({
-      category: cat._id,
+      categories: cat._id,
       images: { $exists: true, $not: { $size: 0 } },
     })
       .limit(5)
       .select("images");
 
-    // Extraer solo la primera imagen de cada producto encontrado
     catObj.productPreviewImages = products
       .map((p) => p.images[0])
       .filter(Boolean);
-    catObj.productCount = await Product.countDocuments({ category: cat._id });
+
+    // AQUI TAMBIEN: Cambiamos category por categories
+    catObj.productCount = await Product.countDocuments({ categories: cat._id });
 
     enriched.push(catObj);
   }
   return enriched;
 };
 
-// Obtener todas las categorías activas (público)
 exports.getCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isActive: true }).sort({
@@ -40,7 +40,6 @@ exports.getCategories = async (req, res) => {
   }
 };
 
-// Obtener todas las categorías (Admin)
 exports.getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ order: 1, name: 1 });
@@ -51,7 +50,6 @@ exports.getAllCategories = async (req, res) => {
   }
 };
 
-// Obtener categorías destacadas
 exports.getFeaturedCategories = async (req, res) => {
   try {
     const categories = await Category.find({ isActive: true, featured: true })
@@ -64,14 +62,14 @@ exports.getFeaturedCategories = async (req, res) => {
   }
 };
 
-// Obtener una categoría por slug
 exports.getCategoryBySlug = async (req, res) => {
   try {
     const category = await Category.findOne({ slug: req.params.slug });
     if (!category) {
       return res.status(404).json({ message: "Categoría no encontrada" });
     }
-    const count = await Product.countDocuments({ category: category._id });
+    // AQUI TAMBIEN: categories
+    const count = await Product.countDocuments({ categories: category._id });
     const catObj = category.toObject();
     catObj.productCount = count;
 
@@ -81,7 +79,6 @@ exports.getCategoryBySlug = async (req, res) => {
   }
 };
 
-// Crear categoría
 exports.createCategory = async (req, res) => {
   try {
     const categoryData = req.body;
@@ -102,7 +99,6 @@ exports.createCategory = async (req, res) => {
   }
 };
 
-// Actualizar categoría
 exports.updateCategory = async (req, res) => {
   try {
     const categoryData = req.body;
@@ -121,16 +117,17 @@ exports.updateCategory = async (req, res) => {
   }
 };
 
-// Eliminar categoría
 exports.deleteCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
     if (!category)
       return res.status(404).json({ message: "Categoría no encontrada" });
 
+    // AQUI TAMBIEN: categories
     const productCount = await Product.countDocuments({
-      category: category._id,
+      categories: category._id,
     });
+
     if (productCount > 0) {
       return res.status(400).json({
         message: `No se puede eliminar. Hay ${productCount} productos en esta categoría.`,
@@ -144,7 +141,6 @@ exports.deleteCategory = async (req, res) => {
   }
 };
 
-// Toggle activo/inactivo
 exports.toggleCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
@@ -165,7 +161,6 @@ exports.toggleCategory = async (req, res) => {
   }
 };
 
-// Toggle destacado
 exports.toggleFeatured = async (req, res) => {
   try {
     const { featured, featuredOrder } = req.body;

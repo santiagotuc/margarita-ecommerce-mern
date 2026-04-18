@@ -5,7 +5,7 @@ const Category = require("../models/Category");
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find()
-      .populate("category", "name slug")
+      .populate("categories", "name slug")
       .sort({ createdAt: -1 });
 
     res.json(products);
@@ -18,7 +18,7 @@ exports.getAllProducts = async (req, res) => {
 exports.getProducts = async (req, res) => {
   try {
     const {
-      category,
+      category, // Este es el slug o id que viene de la URL
       page = 1,
       limit = 12,
       featured,
@@ -29,10 +29,14 @@ exports.getProducts = async (req, res) => {
 
     const query = { isActive: true };
 
-    if (category) query.category = category;
+    // AQUI ESTABA EL ERROR: Cambiamos query.category por query.categories
+    // MongoDB es inteligente: si le pasas un ID a un array (categories), buscará los productos que contengan ese ID dentro de su array.
+    if (category) query.categories = category;
+
     if (featured === "true") query.featured = true;
     if (newArrivals === "true") query.isNewArrival = true;
     if (offer === "true") query.isWeeklyOffer = true;
+
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -41,7 +45,7 @@ exports.getProducts = async (req, res) => {
     }
 
     const products = await Product.find(query)
-      .populate("category", "name slug")
+      .populate("categories", "name slug")
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 });
@@ -63,7 +67,7 @@ exports.getProducts = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate(
-      "category",
+      "categories",
       "name slug",
     );
 
@@ -91,6 +95,12 @@ exports.createProduct = async (req, res) => {
         .json({ message: "Debes subir al menos una imagen" });
     }
 
+    // ASEGURARNOS DE QUE LAS CATEGORÍAS SEAN UN ARRAY
+    // Cuando se envía un solo checkbox por FormData, a veces llega como String en lugar de Array.
+    if (productData.categories && !Array.isArray(productData.categories)) {
+      productData.categories = [productData.categories];
+    }
+
     // Convertir strings booleanos a booleanos reales
     productData.isNewArrival =
       productData.isNewArrival === "true" || productData.isNewArrival === true;
@@ -101,6 +111,10 @@ exports.createProduct = async (req, res) => {
       productData.featured === "true" || productData.featured === true;
     productData.isActive =
       productData.isActive === "true" || productData.isActive === true || true;
+    // Agregamos Kit Margarita
+    productData.isKitMargarita =
+      productData.isKitMargarita === "true" ||
+      productData.isKitMargarita === true;
 
     // Convertir números
     productData.price = Number(productData.price);
@@ -111,7 +125,7 @@ exports.createProduct = async (req, res) => {
     const product = new Product(productData);
     await product.save();
 
-    await product.populate("category");
+    await product.populate("categories");
 
     res.status(201).json({
       message: "Producto creado exitosamente",
@@ -148,6 +162,11 @@ exports.updateProduct = async (req, res) => {
       }
     }
 
+    // ASEGURARNOS DE QUE LAS CATEGORÍAS SEAN UN ARRAY
+    if (productData.categories && !Array.isArray(productData.categories)) {
+      productData.categories = [productData.categories];
+    }
+
     // Convertir tipos
     productData.isNewArrival =
       productData.isNewArrival === "true" || productData.isNewArrival === true;
@@ -158,6 +177,10 @@ exports.updateProduct = async (req, res) => {
       productData.featured === "true" || productData.featured === true;
     productData.isActive =
       productData.isActive === "true" || productData.isActive === true;
+    // Agregamos Kit Margarita
+    productData.isKitMargarita =
+      productData.isKitMargarita === "true" ||
+      productData.isKitMargarita === true;
 
     productData.price = Number(productData.price);
     productData.stock = Number(productData.stock);
@@ -167,7 +190,7 @@ exports.updateProduct = async (req, res) => {
       req.params.id,
       productData,
       { new: true, runValidators: true },
-    ).populate("category");
+    ).populate("categories");
 
     res.json({
       message: "Producto actualizado exitosamente",

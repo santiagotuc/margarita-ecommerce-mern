@@ -1,190 +1,339 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
+import api from "../services/api";
 import {
   FiPackage,
-  FiUsers,
-  FiBarChart2,
-  FiLogOut,
-  FiEdit,
-  FiKey,
-  FiSettings,
   FiGrid,
+  FiAlertTriangle,
+  FiTag,
+  FiSettings,
+  FiArrowRight,
+  FiStar,
 } from "react-icons/fi";
-import api from "../services/api";
-import { logout } from "../store/authSlice";
 
 const AdminProfile = () => {
   const { user } = useSelector((state) => state.auth);
-  const [stats, setStats] = useState({ products: 0, users: 0, orders: 0 });
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    activeProducts: 0,
+    lowStockProducts: [],
+    weeklyOffers: 0,
+    totalCategories: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchStats();
+    const fetchDashboardData = async () => {
+      try {
+        // Obtenemos todos los datos usando las rutas que ya existen
+        const [productsRes, categoriesRes] = await Promise.all([
+          api.get("/products/all"),
+          api.get("/categories"),
+        ]);
+
+        const products = productsRes.data;
+        const categories = categoriesRes.data;
+
+        // Calculamos las estadísticas en el frontend
+        const lowStock = products.filter(
+          (p) => p.stock <= (p.minStockAlert || 5),
+        );
+
+        setStats({
+          totalProducts: products.length,
+          activeProducts: products.filter((p) => p.isActive).length,
+          lowStockProducts: lowStock,
+          weeklyOffers: products.filter((p) => p.isWeeklyOffer).length,
+          totalCategories: categories.length,
+        });
+      } catch (error) {
+        console.error("Error cargando el dashboard", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const productsRes = await api.get("/products?limit=1");
-      setStats({
-        products: productsRes.data.total,
-        users: 1, // Temporal
-        orders: 0, // Temporal
-      });
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/");
-  };
-
-  const menuItems = [
-    {
-      icon: FiBarChart2,
-      title: "Dashboard",
-      description: "Estadísticas y métricas",
-      link: "/admin",
-      color: "bg-blue-500",
-    },
-    {
-      icon: FiPackage,
-      title: "Productos",
-      description: "Gestionar inventario",
-      link: "/admin/productos",
-      color: "bg-primary-500",
-    },
-    {
-      icon: FiGrid,
-      title: "Categorías",
-      description: "Crear y organizar categorías",
-      link: "/admin/categorias",
-      color: "bg-pink-500",
-    },
-    {
-      icon: FiSettings,
-      title: "Configuración Tienda",
-      description: "Datos, redes sociales y textos",
-      link: "/admin/configuracion",
-      color: "bg-emerald-500",
-    },
-    {
-      icon: FiUsers,
-      title: "Usuarios",
-      description: "Gestionar clientes",
-      link: "/admin/usuarios",
-      color: "bg-indigo-500",
-    },
-    {
-      icon: FiEdit,
-      title: "Mi Cuenta",
-      description: "Editar mis datos personales",
-      link: "/perfil/editar",
-      color: "bg-purple-500",
-    },
-  ];
-
-  if (loading) return <div className="text-center py-12">Cargando...</div>;
+  if (loading) {
+    return (
+      <div className="text-center py-20 text-neutral-500 font-medium">
+        Cargando el panel principal...
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 pb-12">
-      {/* Tarjeta de Bienvenida */}
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-neutral-100 mb-8">
-        <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
-          <div className="w-24 h-24 bg-gradient-to-br from-primary-400 to-purple-500 text-white rounded-full flex items-center justify-center text-4xl font-bold shadow-lg shadow-primary-500/30">
-            {user?.firstName?.[0] || user?.email?.[0]}
+    <div className="max-w-7xl mx-auto p-4 md:p-6">
+      {/* Saludo de Bienvenida */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-neutral-800">
+          ¡Hola, {user?.firstName || "Administradora"}! 👋
+        </h1>
+        <p className="text-neutral-500 mt-2 text-lg">
+          Este es el resumen general de tu tienda Margarita.
+        </p>
+      </div>
+
+      {/* Tarjetas de Métricas (KPIs) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Total Productos */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 flex items-center justify-between">
+          <div>
+            <p className="text-neutral-500 font-medium text-sm mb-1">
+              Total Productos
+            </p>
+            <h3 className="text-3xl font-black text-neutral-800">
+              {stats.totalProducts}
+            </h3>
+            <p className="text-xs text-green-500 mt-1 font-medium">
+              {stats.activeProducts} activos en tienda
+            </p>
           </div>
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl font-bold text-neutral-800">
-              ¡Hola, {user?.firstName}! 👋
-            </h1>
-            <p className="text-neutral-500 mb-2">{user?.email}</p>
-            <span className="inline-block bg-primary-50 text-primary-600 px-4 py-1.5 rounded-full text-sm font-bold tracking-wide uppercase">
-              Administradora
-            </span>
+          <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center">
+            <FiPackage size={24} />
           </div>
         </div>
 
-        {/* Estadísticas */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-            <p className="text-3xl font-black text-primary-500 mb-1">
-              {stats.products}
+        {/* Alertas de Stock */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 flex items-center justify-between">
+          <div>
+            <p className="text-neutral-500 font-medium text-sm mb-1">
+              Alertas de Stock
             </p>
-            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">
-              Productos
+            <h3 className="text-3xl font-black text-neutral-800">
+              {stats.lowStockProducts.length}
+            </h3>
+            <p
+              className={`text-xs mt-1 font-medium ${stats.lowStockProducts.length > 0 ? "text-red-500" : "text-neutral-400"}`}
+            >
+              {stats.lowStockProducts.length > 0
+                ? "Requieren tu atención"
+                : "Inventario saludable"}
             </p>
           </div>
-          <div className="text-center p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-            <p className="text-3xl font-black text-indigo-500 mb-1">
-              {stats.users}
+          <div
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center ${stats.lowStockProducts.length > 0 ? "bg-red-50 text-red-500" : "bg-neutral-50 text-neutral-400"}`}
+          >
+            <FiAlertTriangle size={24} />
+          </div>
+        </div>
+
+        {/* Ofertas Activas */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 flex items-center justify-between">
+          <div>
+            <p className="text-neutral-500 font-medium text-sm mb-1">
+              Ofertas Semanales
             </p>
-            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">
-              Usuarios
+            <h3 className="text-3xl font-black text-neutral-800">
+              {stats.weeklyOffers}
+            </h3>
+            <p className="text-xs text-orange-500 mt-1 font-medium">
+              Productos en promoción
             </p>
           </div>
-          <div className="text-center p-4 bg-neutral-50 rounded-xl border border-neutral-100">
-            <p className="text-3xl font-black text-emerald-500 mb-1">
-              {stats.orders}
+          <div className="w-14 h-14 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center">
+            <FiTag size={24} />
+          </div>
+        </div>
+
+        {/* Total Categorías */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 flex items-center justify-between">
+          <div>
+            <p className="text-neutral-500 font-medium text-sm mb-1">
+              Colecciones
             </p>
-            <p className="text-sm font-medium text-neutral-500 uppercase tracking-wider">
-              Pedidos
+            <h3 className="text-3xl font-black text-neutral-800">
+              {stats.totalCategories}
+            </h3>
+            <p className="text-xs text-purple-500 mt-1 font-medium">
+              Categorías creadas
             </p>
+          </div>
+          <div className="w-14 h-14 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center">
+            <FiGrid size={24} />
           </div>
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold mb-6 text-neutral-800">
-        Panel de Control
-      </h2>
-
-      {/* Grilla de Botones */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {menuItems.map((item, index) => (
-          <Link
-            key={index}
-            to={item.link}
-            className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 hover:shadow-lg hover:border-primary-200 transition-all flex items-center gap-4 group"
-          >
-            <div
-              className={`${item.color} text-white p-4 rounded-xl group-hover:scale-110 transition-transform shadow-md`}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Panel Izquierdo: Productos con Bajo Stock */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
+          <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-neutral-800 flex items-center gap-2">
+              <FiAlertTriangle className="text-red-500" /> Productos por
+              agotarse
+            </h2>
+            <Link
+              to="/admin/productos"
+              className="text-sm font-bold text-primary-500 hover:underline"
             >
-              <item.icon size={24} />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-lg text-neutral-800 group-hover:text-primary-600 transition-colors">
-                {item.title}
-              </h3>
-              <p className="text-neutral-500 text-sm mt-0.5">
-                {item.description}
-              </p>
-            </div>
-          </Link>
-        ))}
+              Ver todos
+            </Link>
+          </div>
 
-        {/* Botón Salir */}
-        <button
-          onClick={handleLogout}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 hover:shadow-lg hover:border-red-200 transition-all flex items-center gap-4 group text-left lg:col-span-3"
-        >
-          <div className="bg-red-500 text-white p-4 rounded-xl group-hover:scale-110 transition-transform shadow-md">
-            <FiLogOut size={24} />
+          <div className="p-0">
+            {stats.lowStockProducts.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-neutral-50 text-left text-xs text-neutral-500 uppercase tracking-wider font-bold">
+                    <tr>
+                      <th className="p-4">Producto</th>
+                      <th className="p-4">SKU</th>
+                      <th className="p-4">Stock Actual</th>
+                      <th className="p-4">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {stats.lowStockProducts.slice(0, 5).map((product) => (
+                      <tr
+                        key={product._id}
+                        className="hover:bg-neutral-50 transition-colors"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={
+                                product.images?.[0] ||
+                                "https://via.placeholder.com/40"
+                              }
+                              alt={product.name}
+                              className="w-10 h-10 object-cover rounded-lg border border-neutral-200"
+                            />
+                            <span className="font-medium text-neutral-800">
+                              {product.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-neutral-500">
+                          {product.sku}
+                        </td>
+                        <td className="p-4">
+                          <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold">
+                            Solo {product.stock} un.
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <Link
+                            to="/admin/productos"
+                            className="text-primary-500 font-bold text-sm hover:underline"
+                          >
+                            Actualizar
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FiPackage size={28} />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-800 mb-1">
+                  ¡Todo en orden!
+                </h3>
+                <p className="text-neutral-500">
+                  Ningún producto está por agotarse.
+                </p>
+              </div>
+            )}
           </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-lg text-red-600 group-hover:text-red-700 transition-colors">
-              Cerrar Sesión de Administrador
-            </h3>
-            <p className="text-neutral-500 text-sm mt-0.5">
-              Salir de forma segura del panel
-            </p>
+        </div>
+
+        {/* Panel Derecho: Accesos Rápidos */}
+        <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 p-6">
+          <h2 className="text-lg font-bold text-neutral-800 mb-6">
+            Accesos Rápidos
+          </h2>
+
+          <div className="space-y-4">
+            <Link
+              to="/admin/productos"
+              className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 hover:border-primary-500 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary-50 text-primary-500 rounded-lg flex items-center justify-center">
+                  <FiPackage size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-neutral-800 group-hover:text-primary-500 transition-colors">
+                    Nuevo Producto
+                  </h4>
+                  <p className="text-xs text-neutral-500">
+                    Cargar artículos al catálogo
+                  </p>
+                </div>
+              </div>
+              <FiArrowRight className="text-neutral-300 group-hover:text-primary-500" />
+            </Link>
+
+            <Link
+              to="/admin/categorias"
+              className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 hover:border-purple-500 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-lg flex items-center justify-center">
+                  <FiGrid size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-neutral-800 group-hover:text-purple-500 transition-colors">
+                    Colecciones
+                  </h4>
+                  <p className="text-xs text-neutral-500">
+                    Organizar categorías
+                  </p>
+                </div>
+              </div>
+              <FiArrowRight className="text-neutral-300 group-hover:text-purple-500" />
+            </Link>
+
+            <Link
+              to="/admin/configuracion"
+              className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 hover:border-blue-500 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center">
+                  <FiSettings size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-neutral-800 group-hover:text-blue-500 transition-colors">
+                    Configuración
+                  </h4>
+                  <p className="text-xs text-neutral-500">
+                    Banners, contacto y portada
+                  </p>
+                </div>
+              </div>
+              <FiArrowRight className="text-neutral-300 group-hover:text-blue-500" />
+            </Link>
+
+            {/* Acceso a la tienda pública */}
+            <Link
+              to="/"
+              target="_blank"
+              className="flex items-center justify-between p-4 rounded-xl border border-neutral-100 hover:bg-neutral-800 hover:border-neutral-800 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-neutral-100 text-neutral-600 group-hover:bg-neutral-700 group-hover:text-white rounded-lg flex items-center justify-center transition-colors">
+                  <FiStar size={20} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-neutral-800 group-hover:text-white transition-colors">
+                    Ver Mi Tienda
+                  </h4>
+                  <p className="text-xs text-neutral-500 group-hover:text-neutral-300">
+                    Ir a la vista de los clientes
+                  </p>
+                </div>
+              </div>
+              <FiArrowRight className="text-neutral-300 group-hover:text-white transition-colors" />
+            </Link>
           </div>
-        </button>
+        </div>
       </div>
     </div>
   );

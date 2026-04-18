@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { useSite } from "../context/SiteContext";
 import api from "../services/api";
+import heic2any from "heic2any"; // <-- IMPORTANTE PARA IPHONE
 import {
   FiInstagram,
   FiFacebook,
   FiYoutube,
   FiMessageCircle,
+  FiImage,
+  FiX,
 } from "react-icons/fi";
 
 const AdminSettings = () => {
   const { config, refreshConfig } = useSite();
 
-  // Inicializamos el estado con la estructura completa para evitar errores
   const [formData, setFormData] = useState({
     siteName: "",
     contact: { email: "", phone: "", address: "" },
@@ -20,10 +22,14 @@ const AdminSettings = () => {
     hero: { title: "", subtitle: "", image: "" },
   });
 
+  // Estados para la imagen
+  const [heroImageFile, setHeroImageFile] = useState(null);
+  const [heroImagePreview, setHeroImagePreview] = useState("");
+  const [convertingImage, setConvertingImage] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Cuando carga la configuración del backend, llenamos el formulario
   useEffect(() => {
     if (config) {
       setFormData({
@@ -33,15 +39,72 @@ const AdminSettings = () => {
         aboutUs: { ...formData.aboutUs, ...config.aboutUs },
         hero: { ...formData.hero, ...config.hero },
       });
+      // Si ya hay una imagen guardada, la mostramos en el preview
+      if (config.hero?.image) {
+        setHeroImagePreview(config.hero.image);
+      }
     }
   }, [config]);
+
+  // Manejador de la imagen con soporte para iPhone
+  const handleHeroImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setConvertingImage(true);
+    try {
+      const isHeic =
+        file.type === "image/heic" ||
+        file.type === "image/heif" ||
+        file.name.toLowerCase().endsWith(".heic");
+
+      if (isHeic) {
+        const convertedBlob = await heic2any({
+          blob: file,
+          toType: "image/jpeg",
+          quality: 0.8,
+        });
+        const convertedFile = new File(
+          [convertedBlob],
+          file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+          { type: "image/jpeg" },
+        );
+        setHeroImageFile(convertedFile);
+        setHeroImagePreview(URL.createObjectURL(convertedBlob));
+      } else {
+        setHeroImageFile(file);
+        setHeroImagePreview(URL.createObjectURL(file));
+      }
+    } catch (error) {
+      console.error("Error al convertir imagen:", error);
+      alert("Error procesando la imagen. Intenta con otra.");
+    } finally {
+      setConvertingImage(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.put("/config", formData);
+      // Como ahora enviamos un ARCHIVO, necesitamos usar FormData
+      const data = new FormData();
+
+      // Empaquetamos todo el JSON en un solo campo de texto
+      data.append("configData", JSON.stringify(formData));
+
+      // Adjuntamos la imagen si es que subió una nueva
+      if (heroImageFile) {
+        data.append("heroImage", heroImageFile);
+      }
+
+      // Enviamos la petición
+      await api.put("/config", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
       setMessage("✅ Cambios guardados exitosamente");
-      refreshConfig(); // Actualiza el contexto global
+      refreshConfig();
+      setHeroImageFile(null); // Reseteamos el archivo tras guardar
     } catch (error) {
       setMessage("❌ Error al guardar los cambios");
     } finally {
@@ -50,11 +113,8 @@ const AdminSettings = () => {
     }
   };
 
-  // Función ayudante para crear los "checks" de redes sociales
   const renderSocialToggle = (platform, label, icon) => {
-    // Si la cadena de texto tiene algo, el check está marcado
     const isEnabled = formData.social?.[platform]?.length > 0;
-
     return (
       <div className="border border-neutral-200 rounded-lg p-4 mb-3 bg-neutral-50">
         <label className="flex items-center gap-3 cursor-pointer">
@@ -66,7 +126,6 @@ const AdminSettings = () => {
                 ...formData,
                 social: {
                   ...formData.social,
-                  // Si lo marca, ponemos "https://", si lo desmarca, lo dejamos vacío ""
                   [platform]: e.target.checked ? "https://" : "",
                 },
               });
@@ -77,8 +136,6 @@ const AdminSettings = () => {
             {icon} Mostrar {label} en la tienda
           </span>
         </label>
-
-        {/* Solo mostramos el input si el check está marcado */}
         {isEnabled && (
           <div className="mt-3 pl-8">
             <input
@@ -114,13 +171,11 @@ const AdminSettings = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* COLUMNA 1: Datos de Contacto */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               📞 Datos de Contacto
             </h2>
-
             <div className="space-y-4">
               <div>
                 <label className="block font-medium mb-1 text-sm text-neutral-600">
@@ -134,10 +189,9 @@ const AdminSettings = () => {
                   className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-
               <div>
                 <label className="block font-medium mb-1 text-sm text-neutral-600">
-                  Email Oficial (Para Footer y Arriba)
+                  Email Oficial
                 </label>
                 <input
                   type="email"
@@ -151,7 +205,6 @@ const AdminSettings = () => {
                   className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-
               <div>
                 <label className="block font-medium mb-1 text-sm text-neutral-600">
                   Teléfono / WhatsApp
@@ -170,7 +223,6 @@ const AdminSettings = () => {
             </div>
           </div>
 
-          {/* COLUMNA 1: Sobre Nosotros */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               📖 Sobre Nosotros
@@ -206,112 +258,120 @@ const AdminSettings = () => {
                   }
                   rows="5"
                   className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                  placeholder="Escribe la historia de Margarita..."
+                  placeholder="Escribe la historia..."
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* NUEVO: Portada Principal */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            🖼️ Portada Principal (Hero)
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block font-medium mb-1 text-sm text-neutral-600">
-                Título Principal
-              </label>
-              <input
-                value={formData.hero.title}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    hero: { ...formData.hero, title: e.target.value },
-                  })
-                }
-                className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Ej: Bienvenidos al mundo de Margarita"
-              />
-            </div>
-            <div>
-              <label className="block font-medium mb-1 text-sm text-neutral-600">
-                Subtítulo
-              </label>
-              <input
-                value={formData.hero.subtitle}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    hero: { ...formData.hero, subtitle: e.target.value },
-                  })
-                }
-                className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Ej: Estilo y alegría para tu día a día"
-              />
-            </div>
-            <div>
-              <label className="block font-medium mb-1 text-sm text-neutral-600">
-                Enlace de la Imagen (URL)
-              </label>
-              <input
-                value={formData.hero.image}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    hero: { ...formData.hero, image: e.target.value },
-                  })
-                }
-                className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="https://ejemplo.com/mifoto.jpg"
-              />
-              <p className="text-xs text-neutral-400 mt-1">
-                Pega aquí el enlace de la imagen que quieres mostrar en el
-                inicio.
-              </p>
+        {/* REEMPLAZADO: PORTADA PRINCIPAL CON SUBIDA DE ARCHIVO */}
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              🖼️ Portada Principal (Hero)
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block font-medium mb-1 text-sm text-neutral-600">
+                  Título Principal
+                </label>
+                <input
+                  value={formData.hero.title}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      hero: { ...formData.hero, title: e.target.value },
+                    })
+                  }
+                  className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1 text-sm text-neutral-600">
+                  Subtítulo
+                </label>
+                <input
+                  value={formData.hero.subtitle}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      hero: { ...formData.hero, subtitle: e.target.value },
+                    })
+                  }
+                  className="w-full p-3 border rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              {/* Nuevo Input de Archivo para la foto */}
+              <div>
+                <label className="block font-medium mb-2 text-sm text-neutral-600">
+                  Foto de la portada
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  onChange={handleHeroImageChange}
+                  disabled={convertingImage}
+                  className="w-full px-3 py-2 border border-neutral-200 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                />
+
+                {convertingImage && (
+                  <p className="text-sm text-blue-500 font-bold mt-2 animate-pulse">
+                    🔄 Procesando foto de iPhone...
+                  </p>
+                )}
+
+                {/* Vista previa de la imagen */}
+                {heroImagePreview && (
+                  <div className="mt-4 relative rounded-xl overflow-hidden border border-neutral-200">
+                    <img
+                      src={heroImagePreview}
+                      alt="Vista previa Portada"
+                      className="w-full h-48 object-cover"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        {/* COLUMNA 2: Redes Sociales */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100 h-fit">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            📱 Redes Sociales
-          </h2>
-          <p className="text-sm text-neutral-500 mb-4">
-            Activa las redes que quieres que aparezcan en el pie de página de la
-            tienda.
-          </p>
 
-          {renderSocialToggle(
-            "instagram",
-            "Instagram",
-            <FiInstagram className="text-pink-600" />,
-          )}
-          {renderSocialToggle(
-            "facebook",
-            "Facebook",
-            <FiFacebook className="text-blue-600" />,
-          )}
-          {renderSocialToggle(
-            "youtube",
-            "YouTube",
-            <FiYoutube className="text-red-600" />,
-          )}
-          {renderSocialToggle(
-            "tiktok",
-            "TikTok",
-            <FiMessageCircle className="text-black" />,
-          )}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-neutral-100">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              📱 Redes Sociales
+            </h2>
+            <p className="text-sm text-neutral-500 mb-4">
+              Activa las redes que quieres que aparezcan en el pie de página.
+            </p>
+            {renderSocialToggle(
+              "instagram",
+              "Instagram",
+              <FiInstagram className="text-pink-600" />,
+            )}
+            {renderSocialToggle(
+              "facebook",
+              "Facebook",
+              <FiFacebook className="text-blue-600" />,
+            )}
+            {renderSocialToggle(
+              "youtube",
+              "YouTube",
+              <FiYoutube className="text-red-600" />,
+            )}
+            {renderSocialToggle(
+              "tiktok",
+              "TikTok",
+              <FiMessageCircle className="text-black" />,
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Botón Guardar Flotante */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-4 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.1)] z-40">
         <div className="max-w-4xl mx-auto flex justify-end">
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || convertingImage}
             className="bg-primary-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           >
             {saving ? "Guardando Cambios..." : "Guardar Toda La Configuración"}

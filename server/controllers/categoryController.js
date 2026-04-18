@@ -1,6 +1,31 @@
 const Category = require("../models/Category");
 const Product = require("../models/Product");
 
+// Función auxiliar mágica para inyectar imágenes de productos a las categorías
+const enrichCategoriesWithImages = async (categories) => {
+  const enriched = [];
+  for (let cat of categories) {
+    const catObj = cat.toObject ? cat.toObject() : cat;
+
+    // Buscar hasta 5 productos de esta categoría para el slideshow
+    const products = await Product.find({
+      category: cat._id,
+      images: { $exists: true, $not: { $size: 0 } },
+    })
+      .limit(5)
+      .select("images");
+
+    // Extraer solo la primera imagen de cada producto encontrado
+    catObj.productPreviewImages = products
+      .map((p) => p.images[0])
+      .filter(Boolean);
+    catObj.productCount = await Product.countDocuments({ category: cat._id });
+
+    enriched.push(catObj);
+  }
+  return enriched;
+};
+
 // Obtener todas las categorías activas (público)
 exports.getCategories = async (req, res) => {
   try {
@@ -8,7 +33,8 @@ exports.getCategories = async (req, res) => {
       order: 1,
       name: 1,
     });
-    res.json(categories);
+    const enrichedCategories = await enrichCategoriesWithImages(categories);
+    res.json(enrichedCategories);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -18,7 +44,8 @@ exports.getCategories = async (req, res) => {
 exports.getAllCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ order: 1, name: 1 });
-    res.json(categories);
+    const enrichedCategories = await enrichCategoriesWithImages(categories);
+    res.json(enrichedCategories);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -27,14 +54,11 @@ exports.getAllCategories = async (req, res) => {
 // Obtener categorías destacadas
 exports.getFeaturedCategories = async (req, res) => {
   try {
-    const categories = await Category.find({
-      isActive: true,
-      featured: true,
-    })
+    const categories = await Category.find({ isActive: true, featured: true })
       .sort({ featuredOrder: 1, name: 1 })
       .limit(4);
-
-    res.json(categories);
+    const enrichedCategories = await enrichCategoriesWithImages(categories);
+    res.json(enrichedCategories);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -47,12 +71,11 @@ exports.getCategoryBySlug = async (req, res) => {
     if (!category) {
       return res.status(404).json({ message: "Categoría no encontrada" });
     }
-
-    // Contar productos
     const count = await Product.countDocuments({ category: category._id });
-    category.productCount = count;
+    const catObj = category.toObject();
+    catObj.productCount = count;
 
-    res.json(category);
+    res.json(catObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -62,11 +85,6 @@ exports.getCategoryBySlug = async (req, res) => {
 exports.createCategory = async (req, res) => {
   try {
     const categoryData = req.body;
-
-    if (req.file) {
-      categoryData.image = req.file.path;
-    }
-
     const category = new Category(categoryData);
     await category.save();
 
@@ -88,25 +106,16 @@ exports.createCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const categoryData = req.body;
-
-    if (req.file) {
-      categoryData.image = req.file.path;
-    }
-
     const category = await Category.findByIdAndUpdate(
       req.params.id,
       categoryData,
       { new: true, runValidators: true },
     );
 
-    if (!category) {
+    if (!category)
       return res.status(404).json({ message: "Categoría no encontrada" });
-    }
 
-    res.json({
-      message: "Categoría actualizada",
-      category,
-    });
+    res.json({ message: "Categoría actualizada", category });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -116,16 +125,12 @@ exports.updateCategory = async (req, res) => {
 exports.deleteCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
-
-    if (!category) {
+    if (!category)
       return res.status(404).json({ message: "Categoría no encontrada" });
-    }
 
-    // Verificar productos asociados
     const productCount = await Product.countDocuments({
       category: category._id,
     });
-
     if (productCount > 0) {
       return res.status(400).json({
         message: `No se puede eliminar. Hay ${productCount} productos en esta categoría.`,
@@ -143,10 +148,8 @@ exports.deleteCategory = async (req, res) => {
 exports.toggleCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
-
-    if (!category) {
+    if (!category)
       return res.status(404).json({ message: "Categoría no encontrada" });
-    }
 
     category.isActive = !category.isActive;
     await category.save();
@@ -166,11 +169,9 @@ exports.toggleCategory = async (req, res) => {
 exports.toggleFeatured = async (req, res) => {
   try {
     const { featured, featuredOrder } = req.body;
-
     const category = await Category.findById(req.params.id);
-    if (!category) {
+    if (!category)
       return res.status(404).json({ message: "Categoría no encontrada" });
-    }
 
     category.featured = featured;
     if (featured) {
@@ -180,7 +181,6 @@ exports.toggleFeatured = async (req, res) => {
     }
 
     await category.save();
-
     res.json({
       message: featured
         ? "Categoría destacada"

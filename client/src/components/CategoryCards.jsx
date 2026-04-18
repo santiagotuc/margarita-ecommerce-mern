@@ -24,11 +24,15 @@ const CategoryCards = () => {
               to={`/categoria/${cat.slug}`}
               className="group relative h-80 overflow-hidden rounded-2xl shadow-md block"
             >
-              {/* Imagen de fondo */}
+              {/* Imagen de fondo (Auto-alimentada del backend) */}
               <img
-                src={cat.image}
+                src={
+                  cat.productPreviewImages?.[0] ||
+                  cat.image ||
+                  "https://via.placeholder.com/400x400?text=Categoria"
+                }
                 alt={cat.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 bg-neutral-100"
               />
 
               {/* Overlay oscuro */}

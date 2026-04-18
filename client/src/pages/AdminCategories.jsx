@@ -1,15 +1,44 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import api from "../services/api";
 import {
   FiPlus,
   FiEdit,
   FiTrash2,
-  FiImage,
   FiEye,
   FiEyeOff,
+  FiPackage,
 } from "react-icons/fi";
-import heic2any from "heic2any";
+
+// Componente para el Slideshow automático (3 segundos)
+const CategoryImageSlideshow = ({ images, categoryName }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (!images || images.length <= 1) return;
+    const intervalId = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
+    }, 3000); // 3 segundos
+    return () => clearInterval(intervalId);
+  }, [images]);
+
+  if (!images || images.length === 0) {
+    return (
+      <div className="w-full h-full bg-neutral-100 flex flex-col items-center justify-center text-neutral-400 p-4">
+        <FiPackage size={40} className="mb-2 opacity-50" />
+        <span className="text-xs font-medium text-center">Sin productos</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      key={currentIndex} // Esto fuerza que React la re-renderice (ideal para transiciones simples)
+      src={images[currentIndex]}
+      alt={`${categoryName} preview`}
+      className="w-full h-full object-cover transition-opacity duration-500 animate-fadeIn"
+    />
+  );
+};
 
 const AdminCategories = () => {
   const [categories, setCategories] = useState([]);
@@ -20,22 +49,7 @@ const AdminCategories = () => {
     name: "",
     description: "",
     order: 0,
-    icon: "box",
   });
-  const [image, setImage] = useState(null);
-  const [previewImage, setPreviewImage] = useState("");
-  const [converting, setConverting] = useState(false); // Nuevo estado para loading
-
-  const icons = [
-    { value: "droplet", label: "Gota (Jabones)" },
-    { value: "sun", label: "Sol (Velas)" },
-    { value: "heart", label: "Corazón (Cosmética)" },
-    { value: "box", label: "Caja (Moldes)" },
-    { value: "package", label: "Paquete (Envases)" },
-    { value: "wind", label: "Viento (Flores)" },
-    { value: "feather", label: "Pluma (Kits)" },
-    { value: "hexagon", label: "Hexágono (Madera)" },
-  ];
 
   useEffect(() => {
     fetchCategories();
@@ -52,89 +66,25 @@ const AdminCategories = () => {
     }
   };
 
-  // ✅ FUNCIÓN CORREGIDA: Conversión HEIC incluida DENTRO del componente
-  const handleImageChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      // Detectar HEIC/HEIF (iPhone)
-      const isHeic =
-        file.type === "image/heic" ||
-        file.type === "image/heif" ||
-        file.name.toLowerCase().endsWith(".heic") ||
-        file.name.toLowerCase().endsWith(".heif");
-
-      if (isHeic) {
-        setConverting(true);
-        console.log("🔄 Convirtiendo HEIC a JPEG...");
-
-        const convertedBlob = await heic2any({
-          blob: file,
-          toType: "image/jpeg",
-          quality: 0.8,
-        });
-
-        const convertedFile = new File(
-          [convertedBlob],
-          file.name.replace(/\.(heic|heif)$/i, ".jpg"),
-          { type: "image/jpeg" },
-        );
-
-        setImage(convertedFile);
-        setPreviewImage(URL.createObjectURL(convertedBlob));
-        console.log("✅ Conversión exitosa");
-      } else {
-        // Cualquier otra imagen (JPG, PNG, WebP)
-        setImage(file);
-        setPreviewImage(URL.createObjectURL(file));
-      }
-    } catch (error) {
-      console.error("❌ Error convirtiendo imagen:", error);
-      alert("Error al convertir la imagen. Intenta con otro formato.");
-    } finally {
-      setConverting(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.name) {
       alert("El nombre es obligatorio");
       return;
     }
 
     try {
-      const data = new FormData();
-
-      // Agregar todos los campos del formulario
-      Object.keys(formData).forEach((key) => {
-        data.append(key, formData[key]);
-      });
-
-      // Agregar imagen si existe
-      if (image) {
-        data.append("image", image);
-      }
-
       if (editingCategory) {
-        await api.put(`/categories/${editingCategory._id}`, data);
+        await api.put(`/categories/${editingCategory._id}`, formData);
       } else {
-        await api.post("/categories", data);
+        await api.post("/categories", formData);
       }
 
-      // Limpiar formulario
       setShowForm(false);
       setEditingCategory(null);
-      setFormData({ name: "", description: "", order: 0, icon: "box" });
-      setImage(null);
-      setPreviewImage("");
-
-      // Recargar lista
+      setFormData({ name: "", description: "", order: 0 });
       fetchCategories();
     } catch (error) {
-      console.error("Error:", error);
       alert(error.response?.data?.message || "Error guardando categoría");
     }
   };
@@ -144,16 +94,18 @@ const AdminCategories = () => {
     setFormData({
       name: category.name,
       description: category.description || "",
-      order: category.order,
-      icon: category.icon || "box",
+      order: category.order || 0,
     });
-    setPreviewImage(category.image);
-    setImage(null); // Resetear imagen para no re-subirla si no cambia
     setShowForm(true);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("¿Eliminar esta categoría?")) return;
+    if (
+      !window.confirm(
+        "¿Eliminar esta categoría? Solo se puede si no tiene productos.",
+      )
+    )
+      return;
     try {
       await api.delete(`/categories/${id}`);
       fetchCategories();
@@ -161,7 +113,7 @@ const AdminCategories = () => {
       alert(error.response?.data?.message || "Error eliminando categoría");
     }
   };
-  // En AdminCategories.jsx, agregar checkbox para destacadas:
+
   const toggleFeatured = async (id, featured) => {
     try {
       await api.patch(`/categories/${id}/featured`, { featured });
@@ -170,15 +122,6 @@ const AdminCategories = () => {
       console.error(error);
     }
   };
-
-  // En el render de cada categoría:
-  <button
-    onClick={() => toggleFeatured(category._id, !category.featured)}
-    className={`p-2 rounded ${category.featured ? "bg-yellow-100 text-yellow-600" : "bg-gray-100"}`}
-    title="Destacar en home"
-  >
-    {category.featured ? "⭐" : "☆"}
-  </button>;
 
   const toggleActive = async (id) => {
     try {
@@ -198,12 +141,10 @@ const AdminCategories = () => {
         <button
           onClick={() => {
             setEditingCategory(null);
-            setFormData({ name: "", description: "", order: 0, icon: "box" });
-            setPreviewImage("");
-            setImage(null);
+            setFormData({ name: "", description: "", order: 0 });
             setShowForm(!showForm);
           }}
-          className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-secondary transition-colors flex items-center gap-2"
+          className="bg-primary-500 text-white px-6 py-3 rounded-xl hover:bg-primary-600 transition-colors flex items-center gap-2 font-bold shadow-md"
         >
           <FiPlus /> {showForm ? "Cancelar" : "Nueva Categoría"}
         </button>
@@ -211,8 +152,8 @@ const AdminCategories = () => {
 
       {/* Formulario */}
       {showForm && (
-        <div className="bg-white p-6 rounded-xl shadow-sm mb-8 border">
-          <h2 className="text-xl font-bold mb-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl mb-8 border border-neutral-100">
+          <h2 className="text-2xl font-black mb-6 text-neutral-800">
             {editingCategory ? "Editar Categoría" : "Nueva Categoría"}
           </h2>
 
@@ -220,10 +161,9 @@ const AdminCategories = () => {
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-6"
           >
-            {/* Nombre */}
             <div>
-              <label className="block font-medium mb-2">
-                Nombre <span className="text-red-500">*</span>
+              <label className="block font-bold mb-2 text-sm text-neutral-600">
+                Nombre *
               </label>
               <input
                 type="text"
@@ -232,135 +172,52 @@ const AdminCategories = () => {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 required
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
                 placeholder="Ej: Mochilas Escolares"
               />
             </div>
 
-            {/* Orden */}
             <div>
-              <label className="block font-medium mb-2">Orden</label>
+              <label className="block font-bold mb-2 text-sm text-neutral-600">
+                Orden de aparición (número)
+              </label>
               <input
                 type="number"
                 value={formData.order}
                 onChange={(e) =>
                   setFormData({ ...formData, order: Number(e.target.value) })
                 }
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary"
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
                 min="0"
               />
             </div>
 
-            {/* Icono */}
-            <div>
-              <label className="block font-medium mb-2">Icono</label>
-              <select
-                value={formData.icon}
-                onChange={(e) =>
-                  setFormData({ ...formData, icon: e.target.value })
-                }
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary"
-              >
-                {icons.map((icon) => (
-                  <option key={icon.value} value={icon.value}>
-                    {icon.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Imagen con soporte HEIC */}
-
-            <div>
-              <label className="block font-medium mb-2">
-                Imagen {editingCategory && "(Dejar vacío para mantener actual)"}
-              </label>
-
-              <div className="space-y-3">
-                {/* Input de archivo con accept ampliado */}
-                <input
-                  type="file"
-                  accept="image/*,.heic,.heif"
-                  onChange={handleImageChange}
-                  disabled={converting}
-                  className="w-full px-3 py-2 border rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-secondary disabled:opacity-50"
-                />
-
-                {/* Indicador de conversión */}
-                {converting && (
-                  <div className="flex items-center gap-2 text-sm text-blue-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    Convirtiendo imagen de iPhone...
-                  </div>
-                )}
-
-                {/* Preview de imagen */}
-                {previewImage && (
-                  <div className="relative">
-                    <img
-                      src={previewImage}
-                      alt="Vista previa"
-                      className="w-32 h-32 object-cover rounded-lg border-2 border-gray-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImage(null);
-                        setPreviewImage("");
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      title="Quitar imagen"
-                    >
-                      <FiTrash2 size={14} />
-                    </button>
-                  </div>
-                )}
-
-                {/* Texto informativo */}
-                <p className="text-xs text-gray-500">
-                  Formatos: JPG, PNG, WebP.
-                  <span className="text-blue-600 font-medium">
-                    {" "}
-                    Fotos de iPhone (.heic) se convierten automáticamente.
-                  </span>
-                  Máx: 10MB.
-                </p>
-              </div>
-            </div>
-
-            {/* Descripción - ocupa 2 columnas */}
             <div className="md:col-span-2">
-              <label className="block font-medium mb-2">Descripción</label>
+              <label className="block font-bold mb-2 text-sm text-neutral-600">
+                Descripción breve
+              </label>
               <textarea
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                rows="3"
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary resize-none"
-                placeholder="Descripción breve de la categoría..."
+                rows="2"
+                className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none resize-none"
+                placeholder="Descripción para mostrar en la tienda..."
               />
             </div>
 
-            {/* Botones */}
-            <div className="md:col-span-2 flex gap-4">
+            <div className="md:col-span-2 flex gap-4 pt-4 border-t border-neutral-100">
               <button
                 type="submit"
-                disabled={converting}
-                className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="bg-primary-500 text-white px-8 py-3 rounded-xl hover:bg-primary-600 font-bold shadow-lg"
               >
                 {editingCategory ? "Actualizar Categoría" : "Crear Categoría"}
               </button>
-
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingCategory(null);
-                  setImage(null);
-                  setPreviewImage("");
-                }}
-                className="px-8 py-3 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors text-gray-700"
+                onClick={() => setShowForm(false)}
+                className="px-8 py-3 rounded-xl border border-neutral-200 text-neutral-600 hover:bg-neutral-50 font-bold"
               >
                 Cancelar
               </button>
@@ -369,94 +226,81 @@ const AdminCategories = () => {
         </div>
       )}
 
-      {/* Lista de categorías */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Lista de categorías con SLIDESHOW */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {categories.map((category) => (
           <div
             key={category._id}
-            className={`bg-white rounded-xl shadow-sm overflow-hidden border transition-all hover:shadow-md ${!category.isActive ? "opacity-60 grayscale" : ""}`}
+            className={`bg-white rounded-3xl overflow-hidden border border-neutral-100 shadow-sm hover:shadow-xl transition-all duration-300 ${!category.isActive ? "opacity-75 grayscale-[50%]" : ""}`}
           >
-            {/* Imagen de categoría */}
-            <div className="relative h-48 bg-gray-100">
-              <img
-                src={
-                  category.image ||
-                  "https://via.placeholder.com/400x300?text=Sin+Imagen"
-                }
-                alt={category.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.src =
-                    "https://via.placeholder.com/400x300?text=Error+Carga";
-                }}
+            {/* Visualizador Inteligente (Slideshow) */}
+            <div className="relative h-48 bg-neutral-100 overflow-hidden group">
+              <CategoryImageSlideshow
+                images={category.productPreviewImages}
+                categoryName={category.name}
               />
-              {/* Badge de estado */}
-              <div className="absolute top-3 right-3">
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-bold ${category.isActive ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}
+
+              <div className="absolute top-3 right-3 flex gap-2">
+                <button
+                  onClick={() =>
+                    toggleFeatured(category._id, !category.featured)
+                  }
+                  className={`px-3 py-1.5 rounded-full text-xs font-black shadow-md transition-colors ${category.featured ? "bg-yellow-400 text-yellow-900" : "bg-white text-neutral-400 hover:text-yellow-500"}`}
+                  title="Destacar en Inicio"
                 >
-                  {category.isActive ? "Activa" : "Inactiva"}
-                </span>
+                  {category.featured ? "⭐ DESTACADA" : "☆ Destacar"}
+                </button>
               </div>
-              {/* Badge de orden */}
-              <div className="absolute top-3 left-3">
-                <span className="bg-black/50 text-white px-2 py-1 rounded text-xs">
-                  #{category.order}
-                </span>
-              </div>
+
+              {!category.isActive && (
+                <div className="absolute inset-0 bg-neutral-900/40 flex items-center justify-center">
+                  <span className="bg-red-500 text-white px-4 py-1 rounded-full font-bold uppercase tracking-widest text-xs">
+                    Oculta
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Contenido */}
-            <div className="p-5">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-xl font-bold text-gray-800">
-                  {category.name}
-                </h3>
-              </div>
-
-              <p className="text-gray-500 text-sm mb-4 line-clamp-2 min-h-[40px]">
+            {/* Datos */}
+            <div className="p-6">
+              <h3 className="text-xl font-black text-neutral-800 mb-1">
+                {category.name}
+              </h3>
+              <p className="text-neutral-500 text-sm mb-4 line-clamp-2 min-h-[40px]">
                 {category.description || "Sin descripción"}
               </p>
 
-              {/* Stats */}
-              <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
-                <span className="flex items-center gap-1">
-                  <FiPackage size={16} />
-                  {category.productCount || 0} productos
-                </span>
-                <span className="flex items-center gap-1">
-                  <FiImage size={16} />
-                  {category.icon}
-                </span>
-              </div>
+              <p className="text-xs font-bold text-primary-500 mb-6 uppercase tracking-wider">
+                {category.productCount || 0} Productos vinculados
+              </p>
 
-              {/* Acciones */}
-              <div className="flex gap-2 pt-3 border-t">
+              {/* Botones de acción */}
+              <div className="flex gap-2 border-t border-neutral-100 pt-4">
                 <button
                   onClick={() => toggleActive(category._id)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${category.isActive ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
-                  title={category.isActive ? "Desactivar" : "Activar"}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors ${category.isActive ? "bg-orange-50 text-orange-600 hover:bg-orange-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}
                 >
                   {category.isActive ? (
-                    <FiEyeOff size={16} />
+                    <>
+                      <FiEyeOff /> Ocultar
+                    </>
                   ) : (
-                    <FiEye size={16} />
+                    <>
+                      <FiEye /> Mostrar
+                    </>
                   )}
-                  {category.isActive ? "Desactivar" : "Activar"}
                 </button>
 
                 <button
                   onClick={() => handleEdit(category)}
-                  className="flex-1 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                  className="w-12 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
                 >
                   <FiEdit size={16} />
-                  Editar
                 </button>
 
                 <button
                   onClick={() => handleDelete(category._id)}
-                  className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                  title="Eliminar"
+                  className="w-12 h-10 flex items-center justify-center bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
                 >
                   <FiTrash2 size={16} />
                 </button>
@@ -466,15 +310,14 @@ const AdminCategories = () => {
         ))}
       </div>
 
-      {/* Estado vacío */}
       {categories.length === 0 && !loading && (
-        <div className="text-center py-16 bg-gray-50 rounded-xl">
-          <FiPackage size={48} className="mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-600">
+        <div className="text-center py-16 bg-white rounded-3xl border border-neutral-100 shadow-sm mt-8">
+          <FiPackage size={48} className="mx-auto text-neutral-300 mb-4" />
+          <h3 className="text-xl font-bold text-neutral-800">
             No hay categorías
           </h3>
-          <p className="text-gray-500">
-            Crea tu primera categoría para comenzar
+          <p className="text-neutral-500 mt-2">
+            Empieza creando una categoría para organizar tus productos.
           </p>
         </div>
       )}

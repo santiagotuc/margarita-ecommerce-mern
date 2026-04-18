@@ -14,7 +14,13 @@ exports.getConfig = async (req, res) => {
 exports.updateConfig = async (req, res) => {
   try {
     const config = await SiteConfig.getConfig();
-    const updates = req.body;
+
+    // Novedad: Si viene de FormData, los datos vienen en 'req.body.configData' (como string)
+    // Si viene normal (sin foto), viene en 'req.body'
+    let updates = req.body;
+    if (req.body.configData) {
+      updates = JSON.parse(req.body.configData);
+    }
 
     // Si la administradora subió un archivo, lo guardamos en el objeto hero
     if (req.file) {
@@ -30,12 +36,13 @@ exports.updateConfig = async (req, res) => {
     if (updates.footerInfo)
       Object.assign(config.footerInfo, updates.footerInfo);
     if (updates.banners) Object.assign(config.banners, updates.banners);
-    if (updates.siteName) config.siteName = updates.siteName;
-    if (updates.logo) config.logo = updates.logo;
+    if (updates.siteName !== undefined) config.siteName = updates.siteName;
+    if (updates.logo !== undefined) config.logo = updates.logo;
 
     await config.save();
     res.json(config);
   } catch (error) {
+    console.error("Error al actualizar config:", error);
     res.status(400).json({ message: error.message });
   }
 };

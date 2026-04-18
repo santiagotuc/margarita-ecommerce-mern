@@ -4,18 +4,16 @@ import { useSite } from "../context/SiteContext";
 const Hero = () => {
   const { config } = useSite();
 
-  // Si Ari no ha configurado nada aún, usamos estos datos por defecto
   const heroData = config?.hero || {
     title: "Bienvenidos al mundo de Margarita",
     subtitle: "Estilo y alegría para tu día a día",
-    image: "https://via.placeholder.com/600x800?text=Foto+Margarita", // Imagen gris por defecto
+    image: "https://via.placeholder.com/600x800?text=Foto+Margarita",
   };
 
   return (
     <section className="relative bg-neutral-50 overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center min-h-[600px]">
-          {/* Textos */}
           <div className="w-full md:w-1/2 p-8 md:p-12 z-10">
             <h1 className="text-5xl md:text-6xl font-black text-neutral-800 leading-tight mb-6">
               {heroData.title}
@@ -30,7 +28,7 @@ const Hero = () => {
                 Ver Productos
               </Link>
               <Link
-                to="/categoria/botellas"
+                to="/nosotros"
                 className="border-2 border-primary-500 text-primary-500 px-8 py-3 rounded-full font-medium hover:bg-primary-50 transition-colors"
               >
                 Conocer Más
@@ -38,7 +36,6 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* Imagen de la Portada */}
           <div className="w-full md:w-1/2 h-[400px] md:h-[600px] relative">
             <div className="absolute inset-0 bg-gradient-to-r from-neutral-50 to-transparent z-10 md:hidden"></div>
             {heroData.image ? (

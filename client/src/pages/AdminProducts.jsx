@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import heic2any from "heic2any";
+import Modal from "../components/Modal"; // <-- IMPORTAMOS TU MODAL
 import {
   FiPlus,
   FiEdit,
@@ -25,6 +27,9 @@ const AdminProducts = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [previewImages, setPreviewImages] = useState([]);
 
+  // ESTADO DEL MODAL
+  const [modalConfig, setModalConfig] = useState({ isOpen: false });
+
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
@@ -41,26 +46,19 @@ const AdminProducts = () => {
   });
 
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [converting, setConverting] = useState(false);
   const navigate = useNavigate();
 
-  // Nuevos estados para el Modal de Categoría
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
-    icon: "box",
   });
 
-  const icons = [
-    { value: "droplet", label: "Gota (Jabones)" },
-    { value: "sun", label: "Sol (Velas)" },
-    { value: "heart", label: "Corazón (Cosmética)" },
-    { value: "box", label: "Caja (Moldes)" },
-    { value: "package", label: "Paquete (Envases)" },
-    { value: "wind", label: "Viento (Flores)" },
-    { value: "feather", label: "Pluma (Kits)" },
-    { value: "hexagon", label: "Hexágono (Madera)" },
-  ];
+  // Función ayudante para lanzar el Modal fácilmente
+  const showModal = (type, title, message) => {
+    setModalConfig({ isOpen: true, type, title, message });
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -72,8 +70,7 @@ const AdminProducts = () => {
       const res = await api.get("/products/all");
       setProducts(res.data);
     } catch (error) {
-      console.error("Error cargando productos:", error);
-      alert("Error al cargar productos");
+      showModal("error", "Error", "Error al cargar los productos");
     } finally {
       setLoading(false);
     }
@@ -84,24 +81,67 @@ const AdminProducts = () => {
       const res = await api.get("/categories");
       setCategories(res.data.filter((cat) => cat.isActive));
     } catch (error) {
-      console.error("Error cargando categorías:", error);
+      // Omitimos consola para mantener todo limpio
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 5) {
-      alert("Máximo 5 imágenes");
+      showModal(
+        "warning",
+        "Límite excedido",
+        "Puedes subir un máximo de 5 imágenes",
+      );
       return;
     }
 
-    setSelectedFiles(files);
+    setConverting(true);
+    const processedFiles = [];
+    const previews = [];
 
-    const previews = files.map((file) => URL.createObjectURL(file));
-    setPreviewImages(previews);
+    try {
+      for (let file of files) {
+        const isHeic =
+          file.type === "image/heic" ||
+          file.type === "image/heif" ||
+          file.name.toLowerCase().endsWith(".heic") ||
+          file.name.toLowerCase().endsWith(".heif");
+
+        if (isHeic) {
+          const convertedBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.8,
+          });
+
+          const convertedFile = new File(
+            [convertedBlob],
+            file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+            { type: "image/jpeg" },
+          );
+
+          processedFiles.push(convertedFile);
+          previews.push(URL.createObjectURL(convertedBlob));
+        } else {
+          processedFiles.push(file);
+          previews.push(URL.createObjectURL(file));
+        }
+      }
+
+      setSelectedFiles(processedFiles);
+      setPreviewImages(previews);
+    } catch (error) {
+      showModal(
+        "error",
+        "Error",
+        "Hubo un problema procesando las fotos. Intenta con otra imagen.",
+      );
+    } finally {
+      setConverting(false);
+    }
   };
 
-  // Función para crear categoría rápida
   const handleQuickCreateCategory = async (e) => {
     e.preventDefault();
     try {
@@ -111,11 +151,15 @@ const AdminProducts = () => {
       setFormData({ ...formData, category: data.category._id });
 
       setShowCategoryModal(false);
-      setNewCategory({ name: "", description: "", icon: "box" });
+      setNewCategory({ name: "", description: "" });
 
-      alert("Categoría creada exitosamente");
+      showModal("success", "¡Listo!", "Categoría creada exitosamente");
     } catch (error) {
-      alert(error.response?.data?.message || "Error creando categoría");
+      showModal(
+        "error",
+        "Error",
+        error.response?.data?.message || "Error creando categoría",
+      );
     }
   };
 
@@ -135,16 +179,24 @@ const AdminProducts = () => {
 
       if (editingProduct) {
         await api.put(`/products/${editingProduct._id}`, data);
-        alert("Producto actualizado exitosamente");
+        showModal(
+          "success",
+          "¡Actualizado!",
+          "Producto actualizado exitosamente",
+        );
       } else {
         await api.post("/products", data);
-        alert("Producto creado exitosamente");
+        showModal("success", "¡Creado!", "Producto publicado exitosamente");
       }
 
       resetForm();
       fetchProducts();
     } catch (error) {
-      alert(error.response?.data?.message || "Error guardando producto");
+      showModal(
+        "error",
+        "Error",
+        error.response?.data?.message || "Error guardando producto",
+      );
     }
   };
 
@@ -169,16 +221,29 @@ const AdminProducts = () => {
     window.scrollTo(0, 0);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("¿Estás segura de eliminar este producto?")) return;
-
-    try {
-      await api.delete(`/products/${id}`);
-      alert("Producto eliminado");
-      fetchProducts();
-    } catch (error) {
-      alert("Error eliminando producto");
-    }
+  // REEMPLAZAMOS EL WINDOW.CONFIRM POR EL MODAL
+  const handleDelete = (id) => {
+    setModalConfig({
+      isOpen: true,
+      type: "warning",
+      title: "Eliminar Producto",
+      message:
+        "¿Estás segura de que quieres eliminar este producto? Esta acción no se puede deshacer.",
+      actionText: "Sí, Eliminar",
+      onAction: async () => {
+        try {
+          await api.delete(`/products/${id}`);
+          fetchProducts();
+          showModal(
+            "success",
+            "Eliminado",
+            "El producto fue eliminado de la tienda.",
+          );
+        } catch (error) {
+          showModal("error", "Error", "Error al intentar eliminar el producto");
+        }
+      },
+    });
   };
 
   const toggleActive = async (id) => {
@@ -186,25 +251,36 @@ const AdminProducts = () => {
       await api.patch(`/products/${id}/toggle`);
       fetchProducts();
     } catch (error) {
-      alert("Error cambiando estado");
+      showModal("error", "Error", "Error cambiando el estado del producto");
     }
   };
 
-  const deleteImage = async (productId, imageIndex) => {
-    if (!window.confirm("¿Eliminar esta imagen?")) return;
-    try {
-      await api.delete(`/products/${productId}/image/${imageIndex}`);
-      fetchProducts();
-      if (editingProduct) {
-        const updatedImages = editingProduct.images.filter(
-          (_, i) => i !== imageIndex,
-        );
-        setEditingProduct({ ...editingProduct, images: updatedImages });
-        setPreviewImages(updatedImages);
-      }
-    } catch (error) {
-      alert("Error eliminando imagen");
-    }
+  // REEMPLAZAMOS EL WINDOW.CONFIRM POR EL MODAL
+  const deleteImage = (productId, imageIndex) => {
+    setModalConfig({
+      isOpen: true,
+      type: "warning",
+      title: "Quitar Imagen",
+      message: "¿Segura que deseas borrar esta foto del producto?",
+      actionText: "Borrar Foto",
+      onAction: async () => {
+        try {
+          await api.delete(`/products/${productId}/image/${imageIndex}`);
+          fetchProducts();
+          if (editingProduct) {
+            const updatedImages = editingProduct.images.filter(
+              (_, i) => i !== imageIndex,
+            );
+            setEditingProduct({ ...editingProduct, images: updatedImages });
+            setPreviewImages(updatedImages);
+          }
+          // Cerramos el modal
+          setModalConfig({ isOpen: false });
+        } catch (error) {
+          showModal("error", "Error", "No se pudo eliminar la imagen");
+        }
+      },
+    });
   };
 
   const resetForm = () => {
@@ -241,6 +317,12 @@ const AdminProducts = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6">
+      {/* AQUÍ MONTAMOS EL MODAL PARA TODA LA PÁGINA */}
+      <Modal
+        {...modalConfig}
+        onClose={() => setModalConfig({ ...modalConfig, isOpen: false })}
+      />
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-neutral-800">
@@ -259,7 +341,7 @@ const AdminProducts = () => {
         </button>
       </div>
 
-      {/* Formulario */}
+      {/* Formulario de Producto */}
       {showForm && (
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-neutral-200">
           <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
@@ -404,14 +486,23 @@ const AdminProducts = () => {
               <input
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 onChange={handleImageChange}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                disabled={converting}
+                className="w-full px-4 py-3 border border-neutral-200 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 required={!editingProduct}
               />
-              <p className="text-xs text-neutral-500 mt-1">
-                Máximo 5 imágenes. Primera imagen será la principal.
-              </p>
+
+              {converting ? (
+                <p className="text-sm text-blue-500 font-bold mt-2 animate-pulse">
+                  🔄 Transformando fotos de iPhone para la web...
+                </p>
+              ) : (
+                <p className="text-xs text-neutral-500 mt-1">
+                  Máximo 5 imágenes. La primera imagen será la principal. Fotos
+                  de iPhone soportadas automáticamente.
+                </p>
+              )}
 
               {/* Preview de imágenes */}
               {previewImages.length > 0 && (
@@ -521,7 +612,8 @@ const AdminProducts = () => {
             <div className="md:col-span-2 flex gap-4 pt-4 border-t">
               <button
                 type="submit"
-                className="bg-primary-500 text-white px-8 py-3 rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-2 font-medium"
+                disabled={converting}
+                className="bg-primary-500 text-white px-8 py-3 rounded-lg hover:bg-primary-600 transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
               >
                 <FiCheck />{" "}
                 {editingProduct ? "Actualizar Producto" : "Crear Producto"}
@@ -540,7 +632,7 @@ const AdminProducts = () => {
       )}
 
       {/* Lista de Productos */}
-      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden relative z-0">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-neutral-50 border-b border-neutral-200">
@@ -581,7 +673,7 @@ const AdminProducts = () => {
                           "https://via.placeholder.com/50"
                         }
                         alt={product.name}
-                        className="w-12 h-12 object-cover rounded-lg"
+                        className="w-12 h-12 object-cover rounded-lg bg-neutral-100"
                       />
                       <div>
                         <p className="font-medium text-neutral-800">
@@ -694,26 +786,27 @@ const AdminProducts = () => {
         )}
       </div>
 
-      {/* Modal Crear Categoría Rápida */}
+      {/* Modal Crear Categoría Rápida - Limpio y con Z-Index ALTO */}
       {showCategoryModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-neutral-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl relative">
+            <button
+              onClick={() => setShowCategoryModal(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-800"
+            >
+              <FiX size={24} />
+            </button>
+
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold flex items-center gap-2">
+              <h3 className="text-xl font-black flex items-center gap-2 text-neutral-800">
                 <FiPlus className="text-primary-500" />
                 Nueva Categoría
               </h3>
-              <button
-                onClick={() => setShowCategoryModal(false)}
-                className="p-2 hover:bg-neutral-100 rounded-full"
-              >
-                <FiX />
-              </button>
             </div>
 
             <form onSubmit={handleQuickCreateCategory} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-sm font-bold mb-1 text-neutral-600">
                   Nombre *
                 </label>
                 <input
@@ -722,14 +815,14 @@ const AdminProducts = () => {
                   onChange={(e) =>
                     setNewCategory({ ...newCategory, name: e.target.value })
                   }
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+                  className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none"
                   placeholder="Ej: Mochilas"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-sm font-bold mb-1 text-neutral-600">
                   Descripción
                 </label>
                 <textarea
@@ -740,42 +833,18 @@ const AdminProducts = () => {
                       description: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 outline-none resize-none"
+                  className="w-full px-4 py-3 border border-neutral-200 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none resize-none"
                   placeholder="Breve descripción..."
                   rows="2"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Icono</label>
-                <select
-                  value={newCategory.icon}
-                  onChange={(e) =>
-                    setNewCategory({ ...newCategory, icon: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
-                >
-                  {icons.map((icon) => (
-                    <option key={icon.value} value={icon.value}>
-                      {icon.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex gap-3 pt-4">
+              <div className="pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-primary-500 text-white py-3 rounded-lg hover:bg-primary-600 font-medium"
+                  className="w-full bg-primary-500 text-white py-3 rounded-xl hover:bg-primary-600 font-bold shadow-lg"
                 >
                   Crear Categoría
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCategoryModal(false)}
-                  className="px-6 py-3 border border-neutral-300 rounded-lg hover:bg-neutral-50"
-                >
-                  Cancelar
                 </button>
               </div>
             </form>

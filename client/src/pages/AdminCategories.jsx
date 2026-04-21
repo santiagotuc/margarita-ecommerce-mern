@@ -149,7 +149,6 @@ const AdminCategories = () => {
           <FiPlus /> {showForm ? "Cancelar" : "Nueva Categoría"}
         </button>
       </div>
-
       {/* Formulario */}
       {showForm && (
         <div className="bg-white p-8 rounded-2xl shadow-xl mb-8 border border-neutral-100">
@@ -225,7 +224,6 @@ const AdminCategories = () => {
           </form>
         </div>
       )}
-
       {/* Lista de categorías con SLIDESHOW */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {categories.map((category) => (
@@ -309,7 +307,6 @@ const AdminCategories = () => {
           </div>
         ))}
       </div>
-
       {categories.length === 0 && !loading && (
         <div className="text-center py-16 bg-white rounded-3xl border border-neutral-100 shadow-sm mt-8">
           <FiPackage size={48} className="mx-auto text-neutral-300 mb-4" />
